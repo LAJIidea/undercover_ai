@@ -47,10 +47,10 @@ export function setupWebSocket(server) {
       case 'create_room': {
         const roomId = createRoom();
         client.roomId = roomId;
-        client.type = msg.clientType || 'display'; // 'display' or 'player'
+        client.type = msg.clientType || 'display';
         const room = getRoom(roomId);
         room.broadcast = (data) => broadcastToRoom(roomId, data);
-        send(ws, { type: 'room_created', roomId });
+        send(ws, { type: 'room_created', roomId, state: getPublicState(room.state) });
         break;
       }
 

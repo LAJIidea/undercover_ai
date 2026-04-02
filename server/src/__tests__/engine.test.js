@@ -25,6 +25,7 @@ import {
   getPublicState,
 } from '../game/engine.js';
 import { isValidModel, validateApiKey, preflightApiKeyCheck } from '../ai/openrouter.js';
+import { getAIResponse } from '../ai/agent-manager.js';
 
 function setupRoom() {
   const roomId = createRoom();
@@ -189,15 +190,66 @@ describe('Game Engine', () => {
         ([msg]) => msg.type === 'discussion_message' && msg.playerId?.startsWith('ai_')
       );
 
-      // In round 1, AI is game team, so AI discussions should fire
-      if (aiDiscussionBroadcasts.length > 0) {
-        const [msg] = aiDiscussionBroadcasts[0];
-        expect(msg.state).toBeTruthy();
-        expect(msg.state.round).toBeTruthy();
-        expect(msg.state.round.discussions).toBeInstanceOf(Array);
-        expect(msg.state.round.discussions.length).toBeGreaterThan(0);
-      }
+      // In round 1, AI is game team, so AI discussions MUST fire
+      expect(aiDiscussionBroadcasts.length).toBeGreaterThan(0);
+      const [msg] = aiDiscussionBroadcasts[0];
+      expect(msg.state).toBeTruthy();
+      expect(msg.state.round).toBeTruthy();
+      expect(msg.state.round.discussions).toBeInstanceOf(Array);
+      expect(msg.state.round.discussions.length).toBeGreaterThan(0);
     }, 15000);
+  });
+
+  describe('Host answer failure fallback (AC-6)', () => {
+    it('host_answer broadcast includes state even when AI throws', () => {
+      const { roomId, room } = setupRoom();
+      const state = room.state;
+
+      // Set up a round in questioning phase
+      state.phase = 'questioning';
+      state.currentRound = 1;
+      state.rounds = [{
+        roundNumber: 1,
+        word: '苹果',
+        wordCategory: '食物',
+        gameTeamType: 'human',
+        observeTeamType: 'ai',
+        gameTeamPlayers: ['human_0', 'human_1', 'human_2', 'human_3'],
+        observeTeamPlayers: ['ai_0', 'ai_1', 'ai_2', 'ai_3'],
+        omniscientId: 'human_0',
+        captainId: 'ai_0',
+        questions: [],
+        discussions: [],
+        questionCount: 0,
+        currentSpeakerIndex: 0,
+        questionStartTime: Date.now(),
+        discussionStartTime: Date.now() - 45000,
+        guessAttempt: null,
+        guessCorrect: false,
+        voteTarget: null,
+        voteCorrect: false,
+        scores: { gameTeam: 0, observeTeam: 0 },
+      }];
+
+      // Make host AI throw on next call
+      getAIResponse.mockRejectedValueOnce(new Error('API failure'));
+
+      // Submit a question from the current speaker
+      submitQuestion(roomId, 'human_0', '这是食物吗？');
+
+      // Wait for async host answer
+      return new Promise(resolve => setTimeout(resolve, 200)).then(() => {
+        // Find host_answer broadcasts
+        const hostAnswers = room.broadcast.mock.calls.filter(
+          ([msg]) => msg.type === 'host_answer'
+        );
+        expect(hostAnswers.length).toBeGreaterThan(0);
+        const [msg] = hostAnswers[hostAnswers.length - 1];
+        expect(msg.answer).toBe('否');
+        expect(msg.state).toBeTruthy();
+        expect(msg.state.round.questions[0].answer).toBe('否');
+      });
+    });
   });
 
   describe('Public state filtering', () => {

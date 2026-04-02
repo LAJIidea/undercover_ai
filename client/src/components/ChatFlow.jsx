@@ -7,7 +7,9 @@ export default function ChatFlow({
   const scrollRef = useRef(null);
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+    if (scrollRef.current?.scrollTo) {
+      scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+    }
   }, [questions, discussions, messages]);
 
   const allPlayers = [...(aiPlayers || []), ...(humanPlayers || [])];

@@ -10,7 +10,10 @@ export default function App() {
 
   const handleCreateRoom = () => {
     ws.send({ type: 'create_room' });
-    ws.on('room_created', (msg) => setRoomId(msg.roomId));
+    ws.on('room_created', (msg) => {
+      setRoomId(msg.roomId);
+      if (msg.state) ws.setGameState(msg.state);
+    });
   };
 
   const phase = ws.gameState?.phase;

@@ -2,28 +2,24 @@
 
 ## 自动化验证执行记录
 
-**执行时间**: 2026-04-02T13:40:44+08:00
+**执行时间**: 2026-04-02T14:03:00+08:00 (Round 6)
 **执行环境**: Node.js v24.11.1, Linux 6.8.0-65-generic
-**执行者**: Claude Code RLCR Loop Round 5
+**执行者**: Claude Code RLCR Loop Round 6
 
 | 验证项 | 结果 | 证据 |
 |--------|------|------|
-| 后端测试 (47 tests, 5 files) | PASS | state/engine/openrouter/words/scoring 全部通过 |
-| 前端测试 (13 tests, 3 files) | PASS | Timer倒计时/STT降级/多轮发言/语音自动发送/TTS触发 |
+| 后端测试 (48 tests, 5 files) | PASS | state/engine/openrouter/words/scoring 全部通过 |
+| 前端测试 (14 tests, 3 files) | PASS | Timer/audio STT/MobilePlayer组件/GameDisplay TTS组件 |
 | 客户端构建 (vite build) | PASS | 50 modules transformed |
 | 服务端启动 | PASS | Server running on port 3001 |
 
-### 关键自动化测试覆盖项
-- **Discussion timer首包含时间戳**: `engine.test.js` - discussion phase_change broadcast includes non-null discussionStartTime
-- **AI讨论实时上屏**: `engine.test.js` - AI discussion_message broadcasts include state with discussions
-- **计分round2↔round3**: `scoring.test.js` - 7个场景全覆盖
-- **API key预检**: `engine.test.js` - rejects format-valid but actually-invalid API key via preflight
-- **Timer倒计时**: `Timer.test.jsx` - counts down, shows 00:00 on expiry
-- **STT降级**: `audio.test.js` - FunASR失败后降级到浏览器
-- **STT多轮**: `audio.test.js` - 连续start/stop两轮均工作
-- **语音自动发送成功**: `integration.test.js` - discussion/questioning阶段自动发送
-- **语音发送失败保留文本**: `integration.test.js` - ws未ready时保留文本+警告
-- **TTS只播AI消息**: `integration.test.js` - 正确过滤AI/host消息
+### 关键自动化测试覆盖项（Round 6更新）
+- **建房初始状态**: server create_room返回state (websocket.js:53)，App.jsx收到后setGameState
+- **AI讨论实时上屏**: `engine.test.js` - AI discussion_message必须包含state+discussions (强制断言，非条件)
+- **主持人失败兜底**: `engine.test.js` - host AI抛错时host_answer仍带state且answer=否
+- **MobilePlayer组件级测试**: `integration.test.jsx` - 真实render组件，mock STT触发回调验证auto-send
+- **MobilePlayer发送失败**: `integration.test.jsx` - send返回false时文本保留+显示"发送失败"
+- **GameDisplay TTS播放**: `integration.test.jsx` - 真实render组件，AI消息触发playTTS，人类消息不触发
 
 ### FunASR/CosyVoice 真实服务验收说明
 以上测试使用mock验证了完整的接线逻辑和降级路径。真实FunASR/CosyVoice服务的端到端验收需要：

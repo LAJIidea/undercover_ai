@@ -328,7 +328,12 @@ async function answerQuestion(room, question, questionIndex) {
     console.error('Host AI error:', err);
     // Maintain yes/no constraint even on failure - default to "否"
     round.questions[questionIndex].answer = '否';
-    room.broadcast?.({ type: 'host_answer', questionIndex, answer: '否' });
+    room.broadcast?.({
+      type: 'host_answer',
+      questionIndex,
+      answer: '否',
+      state: getPublicState(room.state),
+    });
   }
 
   // After answering, trigger discussion then next AI question if AI is game team
