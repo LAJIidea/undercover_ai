@@ -57,10 +57,14 @@ export function setupWebSocket(server) {
       case 'join_room': {
         const { roomId, playerName, clientType } = msg;
         try {
+          const room = getRoom(roomId);
+          if (!room) {
+            sendError(ws, 'Room not found');
+            break;
+          }
           const playerId = client.id;
           client.roomId = roomId;
           client.type = clientType || 'player';
-          const room = getRoom(roomId);
           if (!room.broadcast) {
             room.broadcast = (data) => broadcastToRoom(roomId, data);
           }

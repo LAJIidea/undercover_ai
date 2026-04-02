@@ -108,8 +108,33 @@ export function joinRoom(roomId, player) {
   if (phase !== GamePhase.WAITING && phase !== GamePhase.CONFIGURING) {
     throw new Error('Game already started');
   }
-  if (room.state.humanPlayers.length >= 4) throw new Error('Room is full');
+
+  // Check if this player is already in the room (by id)
   if (room.state.humanPlayers.some(p => p.id === player.id)) return;
+
+  // Allow reconnection: if a player with the same name is disconnected, replace them
+  const disconnectedIndex = room.state.humanPlayers.findIndex(
+    p => p.name === player.name && !p.connected
+  );
+  if (disconnectedIndex !== -1) {
+    room.state.humanPlayers[disconnectedIndex].id = player.id;
+    room.state.humanPlayers[disconnectedIndex].connected = true;
+    room.broadcast?.({ type: 'player_joined', player, state: getPublicState(room.state) });
+    return;
+  }
+
+  // Count only connected players for capacity check
+  const connectedCount = room.state.humanPlayers.filter(p => p.connected).length;
+  if (connectedCount >= 4) throw new Error('Room is full');
+  if (room.state.humanPlayers.length >= 4) {
+    // All 4 slots taken but some disconnected — remove oldest disconnected to make room
+    const dcIdx = room.state.humanPlayers.findIndex(p => !p.connected);
+    if (dcIdx !== -1) {
+      room.state.humanPlayers.splice(dcIdx, 1);
+    } else {
+      throw new Error('Room is full');
+    }
+  }
 
   room.state.humanPlayers.push({
     id: player.id,

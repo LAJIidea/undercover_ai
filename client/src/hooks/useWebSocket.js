@@ -10,7 +10,11 @@ export function useWebSocket(url) {
   const wsRef = useRef(null);
   const handlersRef = useRef({});
 
+  const unmountedRef = useRef(false);
+
   const connect = useCallback(() => {
+    if (unmountedRef.current) return;
+
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = url || `${protocol}//${window.location.host}/ws`;
     const ws = new WebSocket(wsUrl);
@@ -18,7 +22,14 @@ export function useWebSocket(url) {
     ws.onopen = () => setConnected(true);
     ws.onclose = () => {
       setConnected(false);
-      setTimeout(connect, 3000);
+      // Reset session state — server doesn't know this socket anymore
+      setPlayerId(null);
+      setGameState(null);
+      setClientId(null);
+      // Only reconnect if component is still mounted
+      if (!unmountedRef.current) {
+        setTimeout(connect, 3000);
+      }
     };
 
     ws.onmessage = (event) => {
@@ -98,8 +109,12 @@ export function useWebSocket(url) {
   }, [url]);
 
   useEffect(() => {
+    unmountedRef.current = false;
     connect();
-    return () => wsRef.current?.close();
+    return () => {
+      unmountedRef.current = true;
+      wsRef.current?.close();
+    };
   }, [connect]);
 
   const send = useCallback((data) => {

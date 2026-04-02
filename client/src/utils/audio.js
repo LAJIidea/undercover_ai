@@ -7,7 +7,7 @@ async function fetchSTTConfig() {
     const res = await fetch('/api/stt-config');
     sttConfigCache = await res.json();
   } catch {
-    sttConfigCache = { available: false, url: '', key: '' };
+    sttConfigCache = { available: false, wsUrl: '' };
   }
   return sttConfigCache;
 }
@@ -16,9 +16,9 @@ async function fetchSTTConfig() {
 export async function createSTTHandler(onResult, onError) {
   const config = await fetchSTTConfig();
 
-  if (config.available) {
+  if (config.available && config.wsUrl) {
     try {
-      const handler = new FunASRHandler(config.url, config.key, onResult, onError);
+      const handler = new FunASRHandler(config.wsUrl, onResult, onError);
       await handler.init();
       return handler;
     } catch (err) {
@@ -33,9 +33,8 @@ export async function createSTTHandler(onResult, onError) {
 
 // FunASR: microphone capture → audio chunking → WebSocket send → result callback
 class FunASRHandler {
-  constructor(apiUrl, apiKey, onResult, onError) {
-    this.apiUrl = apiUrl;
-    this.apiKey = apiKey;
+  constructor(wsUrl, onResult, onError) {
+    this.wsUrl = wsUrl;
     this.onResult = onResult;
     this.onError = onError;
     this.ws = null;
@@ -46,11 +45,7 @@ class FunASRHandler {
 
   async init() {
     return new Promise((resolve, reject) => {
-      const url = this.apiKey
-        ? `${this.apiUrl}?token=${this.apiKey}`
-        : this.apiUrl;
-
-      this.ws = new WebSocket(url);
+      this.ws = new WebSocket(this.wsUrl);
       this.ws.binaryType = 'arraybuffer';
 
       const timeout = setTimeout(() => {

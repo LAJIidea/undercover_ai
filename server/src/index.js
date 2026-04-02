@@ -19,8 +19,11 @@ app.use('/api', apiRouter);
 if (process.env.NODE_ENV === 'production') {
   const clientDist = resolve(__dirname, '../../client/dist');
   app.use(express.static(clientDist));
-  // SPA fallback: serve index.html for all non-API routes
+  // SPA fallback: serve index.html for non-API routes only
   app.get('*', (req, res) => {
+    if (req.path.startsWith('/api')) {
+      return res.status(404).json({ error: 'API endpoint not found' });
+    }
     res.sendFile(resolve(clientDist, 'index.html'));
   });
 }
