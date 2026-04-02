@@ -1,52 +1,61 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useWebSocket } from '../hooks/useWebSocket.js';
+import { createSTTConnection } from '../utils/audio.js';
 
 export default function MobilePlayer() {
   const { roomId } = useParams();
   const [playerName, setPlayerName] = useState('');
-  const [joined, setJoined] = useState(false);
+  const [joining, setJoining] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [textInput, setTextInput] = useState('');
-  const recognitionRef = useRef(null);
+  const sttRef = useRef(null);
   const ws = useWebSocket();
+
+  // Determine joined state from server confirmation (playerId set)
+  const joined = !!ws.playerId;
 
   const handleJoin = () => {
     if (!playerName.trim()) return;
+    setJoining(true);
+    ws.clearError();
     ws.send({ type: 'join_room', roomId, playerName: playerName.trim(), clientType: 'player' });
-    setJoined(true);
   };
+
+  // Reset joining state on error
+  useEffect(() => {
+    if (ws.error) setJoining(false);
+  }, [ws.error]);
+
+  // Initialize STT connection on join
+  useEffect(() => {
+    if (!joined) return;
+    const stt = createSTTConnection(null, null, (text) => {
+      setTextInput(text);
+      setIsRecording(false);
+    });
+    sttRef.current = stt;
+    return () => stt?.close?.();
+  }, [joined]);
 
   const state = ws.gameState;
   const round = state?.round;
   const myRole = round?.myRole;
   const phase = state?.phase;
 
-  // STT via browser Speech Recognition (fallback)
   const startVoiceInput = () => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      alert('浏览器不支持语音识别，请使用文字输入');
-      return;
+    const stt = sttRef.current;
+    if (stt?.isBrowserFallback) {
+      stt.start();
+    } else if (stt?.start) {
+      stt.start();
     }
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'zh-CN';
-    recognition.continuous = false;
-    recognition.interimResults = false;
-    recognition.onresult = (event) => {
-      const text = event.results[0][0].transcript;
-      setTextInput(text);
-      setIsRecording(false);
-    };
-    recognition.onerror = () => setIsRecording(false);
-    recognition.onend = () => setIsRecording(false);
-    recognitionRef.current = recognition;
-    recognition.start();
     setIsRecording(true);
   };
 
   const stopVoiceInput = () => {
-    recognitionRef.current?.stop();
+    const stt = sttRef.current;
+    if (stt?.stop) stt.stop();
     setIsRecording(false);
   };
 
@@ -76,22 +85,31 @@ export default function MobilePlayer() {
         <div className="w-full max-w-sm">
           <h1 className="text-2xl font-bold text-center mb-2">加入游戏</h1>
           <p className="text-center text-gray-400 mb-6">房间号：{roomId}</p>
+          {ws.error && (
+            <div className="bg-red-900/30 border border-red-700 rounded-xl p-3 mb-4 text-center">
+              <p className="text-red-400 text-sm">{ws.error}</p>
+            </div>
+          )}
           <input
             type="text"
             value={playerName}
             onChange={e => setPlayerName(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleJoin()}
             placeholder="输入你的名字"
             className="w-full bg-card-bg border border-card-border rounded-xl p-4 text-white text-center text-lg mb-4"
             maxLength={10}
           />
           <button
             onClick={handleJoin}
-            disabled={!playerName.trim() || !ws.connected}
+            disabled={!playerName.trim() || !ws.connected || joining}
             className="w-full py-4 bg-primary hover:bg-primary-dark rounded-xl text-lg font-semibold
               transition-all disabled:opacity-50"
           >
-            加入
+            {joining ? '加入中...' : '加入'}
           </button>
+          {!ws.connected && (
+            <p className="text-yellow-500 text-sm text-center mt-2">正在连接服务器...</p>
+          )}
         </div>
       </div>
     );
@@ -99,6 +117,13 @@ export default function MobilePlayer() {
 
   return (
     <div className="min-h-screen bg-game-bg flex flex-col p-4">
+      {/* Error banner */}
+      {ws.error && (
+        <div className="bg-red-900/30 border border-red-700 rounded-xl p-2 mb-3 text-center">
+          <p className="text-red-400 text-sm">{ws.error}</p>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
@@ -123,7 +148,7 @@ export default function MobilePlayer() {
 
       {/* Phase info */}
       <div className="bg-card-bg rounded-xl p-3 mb-4 text-center">
-        <PhaseInfo phase={phase} myRole={myRole} round={round} />
+        <PhaseInfo phase={phase} myRole={myRole} />
       </div>
 
       {/* Recent messages */}
@@ -230,8 +255,8 @@ function RoleBadge({ role }) {
   );
 }
 
-function PhaseInfo({ phase, myRole, round }) {
-  const messages = {
+function PhaseInfo({ phase, myRole }) {
+  const msgs = {
     waiting: '等待游戏开始...',
     configuring: '主持人正在配置游戏...',
     round_start: '回合即将开始！',
@@ -245,5 +270,5 @@ function PhaseInfo({ phase, myRole, round }) {
     round_result: '回合结算中...',
     game_over: '游戏结束！',
   };
-  return <p className="text-sm text-gray-300">{messages[phase] || phase}</p>;
+  return <p className="text-sm text-gray-300">{msgs[phase] || phase}</p>;
 }

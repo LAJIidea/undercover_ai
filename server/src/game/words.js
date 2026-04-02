@@ -62,3 +62,13 @@ async function generateWordWithAI(category, model) {
 export function getWordCount() {
   return Object.values(WORD_DATABASE).reduce((sum, words) => sum + words.length, 0);
 }
+
+export function hasAvailableWords(wordConfig) {
+  const hasPreset = getWordCount() > 0;
+  const mode = wordConfig?.mode || 'preset';
+
+  if (mode === 'preset') return hasPreset;
+  if (mode === 'ai') return true; // AI can always generate
+  if (mode === 'mixed') return hasPreset; // Mixed falls back to preset
+  return hasPreset;
+}

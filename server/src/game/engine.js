@@ -7,8 +7,9 @@ import {
   QUESTION_TIME_LIMIT_MS,
   DISCUSSION_TIME_MS,
 } from './state.js';
-import { selectWord } from './words.js';
+import { selectWord, hasAvailableWords } from './words.js';
 import { getAIResponse } from '../ai/agent-manager.js';
+import { isValidModel, validateApiKey } from '../ai/openrouter.js';
 
 const rooms = new Map();
 
@@ -102,7 +103,10 @@ export function getPublicState(state, playerId = null) {
 export function joinRoom(roomId, player) {
   const room = getRoom(roomId);
   if (!room) throw new Error('Room not found');
-  if (room.state.phase !== GamePhase.WAITING) throw new Error('Game already started');
+  const phase = room.state.phase;
+  if (phase !== GamePhase.WAITING && phase !== GamePhase.CONFIGURING) {
+    throw new Error('Game already started');
+  }
   if (room.state.humanPlayers.length >= 4) throw new Error('Room is full');
   if (room.state.humanPlayers.some(p => p.id === player.id)) return;
 
@@ -120,12 +124,22 @@ export function configureGame(roomId, config) {
 
   if (config.aiPlayers) {
     config.aiPlayers.forEach((aiConf, i) => {
-      if (aiConf.model) room.state.aiConfig.players[i].model = aiConf.model;
+      if (aiConf.model) {
+        if (!isValidModel(aiConf.model)) {
+          throw new Error(`Invalid model: ${aiConf.model}`);
+        }
+        room.state.aiConfig.players[i].model = aiConf.model;
+      }
       if (aiConf.name) room.state.aiConfig.players[i].name = aiConf.name;
       if (aiConf.personality) room.state.aiConfig.players[i].personality = aiConf.personality;
     });
   }
-  if (config.hostModel) room.state.aiConfig.hostModel = config.hostModel;
+  if (config.hostModel) {
+    if (!isValidModel(config.hostModel)) {
+      throw new Error(`Invalid host model: ${config.hostModel}`);
+    }
+    room.state.aiConfig.hostModel = config.hostModel;
+  }
   if (config.wordConfig) Object.assign(room.state.wordConfig, config.wordConfig);
 
   if (room.state.phase === GamePhase.WAITING) {
@@ -143,6 +157,23 @@ export async function startGame(roomId) {
   const allModels = room.state.aiConfig.players.every(p => p.model);
   if (!allModels || !room.state.aiConfig.hostModel) {
     throw new Error('All AI players and host must have models configured');
+  }
+
+  // Validate all model IDs against whitelist
+  for (const p of room.state.aiConfig.players) {
+    if (!isValidModel(p.model)) throw new Error(`Invalid model: ${p.model}`);
+  }
+  if (!isValidModel(room.state.aiConfig.hostModel)) {
+    throw new Error(`Invalid host model: ${room.state.aiConfig.hostModel}`);
+  }
+
+  // Validate OpenRouter API key
+  const keyError = validateApiKey();
+  if (keyError) throw new Error(keyError);
+
+  // Validate word source availability
+  if (!hasAvailableWords(room.state.wordConfig)) {
+    throw new Error('No word source available. Configure preset words or enable AI generation.');
   }
 
   if (room.state.phase === GamePhase.WAITING) {
@@ -287,21 +318,29 @@ async function answerQuestion(room, question, questionIndex) {
     });
   } catch (err) {
     console.error('Host AI error:', err);
-    round.questions[questionIndex].answer = '无法回答';
-    room.broadcast?.({ type: 'host_answer', questionIndex, answer: '无法回答' });
+    // Maintain yes/no constraint even on failure - default to "否"
+    round.questions[questionIndex].answer = '否';
+    room.broadcast?.({ type: 'host_answer', questionIndex, answer: '否' });
   }
 
   // After answering, trigger discussion then next AI question if AI is game team
   if (round.gameTeamType === 'ai' && room.state.phase === GamePhase.QUESTIONING) {
-    setTimeout(() => {
-      if (room.state.phase === GamePhase.QUESTIONING) {
-        triggerAIDiscussionMini(room);
-        setTimeout(() => {
-          if (room.state.phase === GamePhase.QUESTIONING) {
-            triggerAIQuestion(room);
-          }
-        }, 3000);
+    setTimeout(async () => {
+      if (room.state.phase !== GamePhase.QUESTIONING) return;
+
+      await triggerAIDiscussionMini(room);
+
+      // After enough questions, attempt AI guess before asking more
+      if (round.questionCount >= 5) {
+        const guessed = await triggerAIGuess(room);
+        if (guessed) return; // Guess was submitted, flow moves to voting
       }
+
+      setTimeout(() => {
+        if (room.state.phase === GamePhase.QUESTIONING) {
+          triggerAIQuestion(room);
+        }
+      }, 3000);
     }, 2000);
   }
 }
@@ -371,26 +410,38 @@ function calculateRoundScores(room) {
     round.scores.observeTeam += 1;
   }
 
-  // If neither team guessed omniscient (vote wrong), team with fewer questions gets +1
-  // This rule only applies when both teams have played and both failed to find omniscient
-  if (!round.voteCorrect) {
-    // Compare with previous round where roles were swapped
-    const prevRoundIndex = state.rounds.length - 2;
-    if (prevRoundIndex >= 0) {
-      const prevRound = state.rounds[prevRoundIndex];
-      if (!prevRound.voteCorrect) {
-        // Both failed to find omniscient - fewer questions wins
-        if (round.questionCount < prevRound.questionCount) {
-          round.scores.gameTeam += 1;
-        } else if (prevRound.questionCount < round.questionCount) {
-          prevRound.scores.gameTeam += 1;
-          // Recalculate total scores
+  // "Both teams failed to find omniscient" bonus: compare consecutive round pairs
+  // This rule compares rounds where the same teams had swapped roles.
+  // We check pairs: (round 1, round 2), (round 2, round 3), etc.
+  // When both rounds in a pair have voteCorrect=false, fewer questions wins +1.
+  if (!round.voteCorrect && state.rounds.length >= 2) {
+    const prevRound = state.rounds[state.rounds.length - 2];
+    if (!prevRound.voteCorrect && !prevRound.fewerQuestionsSettled) {
+      // Both failed to find omniscient - fewer questions wins
+      let bonusTeamType = null;
+      if (round.questionCount < prevRound.questionCount) {
+        // Current round's game team used fewer questions
+        bonusTeamType = round.gameTeamType;
+      } else if (prevRound.questionCount < round.questionCount) {
+        // Previous round's game team used fewer questions
+        bonusTeamType = prevRound.gameTeamType;
+      }
+      // Equal question counts = no bonus
+
+      if (bonusTeamType) {
+        if (bonusTeamType === 'ai') {
+          state.scores.ai += 1;
+        } else {
+          state.scores.human += 1;
         }
       }
+      // Mark both rounds as settled so we don't double-count
+      round.fewerQuestionsSettled = true;
+      prevRound.fewerQuestionsSettled = true;
     }
   }
 
-  // Apply to total scores
+  // Apply current round's scores to total
   if (round.gameTeamType === 'ai') {
     state.scores.ai += round.scores.gameTeam;
     state.scores.human += round.scores.observeTeam;
@@ -513,10 +564,11 @@ async function triggerAIVote(room) {
 }
 
 // Auto-trigger AI guess if AI is game team and enough info gathered
-export async function triggerAIGuess(room) {
+// Returns true if a guess was submitted
+async function triggerAIGuess(room) {
   const round = getCurrentRound(room.state);
-  if (round.gameTeamType !== 'ai') return;
-  if (round.questionCount < 3) return; // Need at least a few questions
+  if (round.gameTeamType !== 'ai') return false;
+  if (round.questionCount < 3) return false;
 
   try {
     const guess = await getAIResponse('guesser_guess', {
@@ -527,8 +579,10 @@ export async function triggerAIGuess(room) {
     });
     if (guess && guess !== 'SKIP') {
       submitGuess(room.state.roomId, round.gameTeamPlayers[0], guess);
+      return true;
     }
   } catch (err) {
     console.error('AI guess error:', err);
   }
+  return false;
 }

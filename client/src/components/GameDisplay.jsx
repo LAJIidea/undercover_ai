@@ -19,15 +19,19 @@ export default function GameDisplay({ roomId, ws }) {
   const state = ws.gameState;
   const round = state?.round;
   const [ttsEnabled, setTtsEnabled] = useState(true);
-  const lastAiMessageRef = useRef(null);
+  const lastTtsIdRef = useRef(0);
 
-  // Auto-play TTS for AI messages
+  // Auto-play TTS for ALL AI messages (discussions + questions + host answers)
   useEffect(() => {
     if (!ttsEnabled || !ws.messages.length) return;
-    const last = ws.messages[ws.messages.length - 1];
-    if (last?.playerId?.startsWith('ai_') && last !== lastAiMessageRef.current) {
-      lastAiMessageRef.current = last;
-      playTTS(last.message);
+    const newMessages = ws.messages.slice(lastTtsIdRef.current);
+    lastTtsIdRef.current = ws.messages.length;
+
+    for (const msg of newMessages) {
+      // Play TTS for any AI-generated content
+      if (msg.playerId?.startsWith('ai_') || msg.playerId === 'host') {
+        playTTS(msg.message);
+      }
     }
   }, [ws.messages, ttsEnabled]);
 
@@ -35,11 +39,10 @@ export default function GameDisplay({ roomId, ws }) {
 
   const aiPlayers = state.aiPlayers || [];
   const humanPlayers = state.humanPlayers || [];
-
   const isAiGameTeam = round.gameTeamType === 'ai';
 
   return (
-    <div className="min-h-screen bg-game-bg flex flex-col">
+    <div className="min-h-screen bg-game-bg flex flex-col relative">
       {/* Top: AI Team */}
       <div className="p-4">
         <TeamHeader
@@ -61,11 +64,27 @@ export default function GameDisplay({ roomId, ws }) {
         </div>
       </div>
 
-      {/* Middle: Host + Chat + Timer + Score */}
+      {/* Middle: Host + Status + Chat + Timer + Score */}
       <div className="flex-1 flex flex-col px-4 min-h-0">
-        {/* Status bar */}
+        {/* Status bar with Host */}
         <div className="flex items-center justify-between max-w-4xl mx-auto w-full mb-2">
           <div className="flex items-center gap-4">
+            {/* Host avatar */}
+            <div className="flex items-center gap-2 bg-card-bg rounded-xl px-3 py-1.5">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-sm font-bold">
+                MC
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 leading-none">AI主持人</p>
+                <p className="text-xs text-accent leading-none mt-0.5">
+                  {state.phase === 'questioning' ? '等待提问...' :
+                   state.phase === 'discussion' ? '讨论中' :
+                   state.phase === 'voting' ? '等待投票' :
+                   PHASE_LABELS[state.phase] || ''}
+                </p>
+              </div>
+            </div>
+
             <span className="bg-primary/20 text-primary px-3 py-1 rounded-full text-sm font-medium">
               第 {round.roundNumber}/3 轮
             </span>
@@ -85,9 +104,15 @@ export default function GameDisplay({ roomId, ws }) {
 
             {/* Score */}
             <div className="flex items-center gap-3 bg-card-bg rounded-xl px-4 py-2">
-              <span className="text-red-400 font-bold text-lg">{state.scores?.ai || 0}</span>
-              <span className="text-gray-500">:</span>
-              <span className="text-blue-400 font-bold text-lg">{state.scores?.human || 0}</span>
+              <div className="text-center">
+                <p className="text-xs text-gray-500 leading-none">AI</p>
+                <p className="text-red-400 font-bold text-lg">{state.scores?.ai || 0}</p>
+              </div>
+              <span className="text-gray-600 text-xl">:</span>
+              <div className="text-center">
+                <p className="text-xs text-gray-500 leading-none">真人</p>
+                <p className="text-blue-400 font-bold text-lg">{state.scores?.human || 0}</p>
+              </div>
             </div>
 
             {/* TTS toggle */}

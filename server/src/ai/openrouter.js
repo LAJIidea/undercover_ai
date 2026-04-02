@@ -59,6 +59,21 @@ export function getAllModels() {
   return models;
 }
 
+// Build whitelist set of valid model IDs
+const VALID_MODEL_IDS = new Set(getAllModels().map(m => m.id));
+
+export function isValidModel(modelId) {
+  return VALID_MODEL_IDS.has(modelId);
+}
+
+export function validateApiKey() {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey || apiKey === 'your_openrouter_api_key_here') {
+    return 'OPENROUTER_API_KEY is not configured. Please set it in .env file.';
+  }
+  return null;
+}
+
 export async function callOpenRouter(modelId, messages, options = {}) {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error('OPENROUTER_API_KEY not configured');
