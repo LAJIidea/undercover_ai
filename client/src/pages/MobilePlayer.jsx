@@ -44,16 +44,23 @@ export default function MobilePlayer() {
     if (!text.trim()) return;
     const currentPhase = phaseRef.current;
     const currentWs = wsRef.current;
+    let sent = false;
     if (currentPhase === 'discussion') {
-      currentWs.send({ type: 'discuss', message: text.trim() });
+      sent = currentWs.send({ type: 'discuss', message: text.trim() });
     } else if (currentPhase === 'questioning') {
-      currentWs.send({ type: 'question', question: text.trim() });
+      sent = currentWs.send({ type: 'question', question: text.trim() });
     } else {
       // Outside active phases, just fill the text box
       setTextInput(text);
       return;
     }
-    setTextInput(''); // Clear after auto-send
+    if (sent) {
+      setTextInput(''); // Clear only after successful send
+    } else {
+      // Send failed: keep text in input for manual retry, show warning
+      setTextInput(text);
+      setSttStatus('发送失败，请手动点击发送');
+    }
   });
 
   // Initialize STT on join: try FunASR first, fallback to browser
@@ -99,12 +106,17 @@ export default function MobilePlayer() {
 
   const sendMessage = () => {
     if (!textInput.trim()) return;
+    let sent = false;
     if (phase === 'discussion') {
-      ws.send({ type: 'discuss', message: textInput.trim() });
+      sent = ws.send({ type: 'discuss', message: textInput.trim() });
     } else if (phase === 'questioning') {
-      ws.send({ type: 'question', question: textInput.trim() });
+      sent = ws.send({ type: 'question', question: textInput.trim() });
     }
-    setTextInput('');
+    if (sent) {
+      setTextInput('');
+    } else {
+      setSttStatus('发送失败，请重试');
+    }
   };
 
   const sendGuess = () => {

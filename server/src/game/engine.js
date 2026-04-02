@@ -214,10 +214,11 @@ async function startRound(room) {
 }
 
 function startDiscussion(room) {
-  transition(room, GamePhase.DISCUSSION);
-
+  // Set timestamp BEFORE transition so the broadcast includes it
   const round = getCurrentRound(room.state);
   round.discussionStartTime = Date.now();
+
+  transition(room, GamePhase.DISCUSSION);
 
   // Start AI discussion if AI is game team
   if (round.gameTeamType === 'ai') {

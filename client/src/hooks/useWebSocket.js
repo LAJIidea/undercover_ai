@@ -105,7 +105,9 @@ export function useWebSocket(url) {
   const send = useCallback((data) => {
     if (wsRef.current?.readyState === 1) {
       wsRef.current.send(JSON.stringify(data));
+      return true;
     }
+    return false;
   }, []);
 
   const on = useCallback((type, handler) => {

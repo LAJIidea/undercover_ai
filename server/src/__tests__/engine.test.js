@@ -158,6 +158,26 @@ describe('Game Engine', () => {
 
   // Scoring tests moved to scoring.test.js for proper coverage
 
+  describe('Discussion timer broadcast (AC-2/AC-7)', () => {
+    it('discussion phase_change broadcast includes non-null discussionStartTime', async () => {
+      const { roomId, room } = setupRoom();
+      await startGame(roomId);
+
+      // Wait for word assignment timeout → discussion transition
+      await new Promise(r => setTimeout(r, 3500));
+
+      // Find the discussion phase_change broadcast
+      const discussionBroadcast = room.broadcast.mock.calls.find(
+        ([msg]) => msg.type === 'phase_change' && msg.phase === 'discussion'
+      );
+
+      expect(discussionBroadcast).toBeTruthy();
+      const [msg] = discussionBroadcast;
+      expect(msg.state.round.discussionStartTime).toBeTypeOf('number');
+      expect(msg.state.round.discussionStartTime).toBeGreaterThan(0);
+    });
+  });
+
   describe('Public state filtering', () => {
     it('hides word from non-omniscient game team members', () => {
       const { room } = setupRoom();
