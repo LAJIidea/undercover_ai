@@ -82,9 +82,9 @@ function renderMobilePlayer() {
 }
 
 // ============================================================
-// App → Lobby first-screen regression (AC-7/AC-8)
+// App → Lobby first-screen regression
 // ============================================================
-describe('App → Lobby first-screen (AC-7/AC-8)', () => {
+describe('App → Lobby first-screen', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     _resetCapture();
@@ -128,9 +128,9 @@ describe('App → Lobby first-screen (AC-7/AC-8)', () => {
 });
 
 // ============================================================
-// MobilePlayer component (AC-8)
+// MobilePlayer component
 // ============================================================
-describe('MobilePlayer component (AC-8)', () => {
+describe('MobilePlayer component', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     _resetCapture();
@@ -181,9 +181,7 @@ describe('MobilePlayer component (AC-8)', () => {
     mockWs.gameState = makeGameState('questioning');
     renderMobilePlayer();
 
-    await act(async () => { await new Promise(r => setTimeout(r, 50)); });
-
-    expect(createSTTHandler).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(createSTTHandler).toHaveBeenCalledTimes(1));
 
     act(() => { _triggerSTTResult('这是食物吗'); });
 
@@ -199,9 +197,7 @@ describe('MobilePlayer component (AC-8)', () => {
     mockWs.gameState = makeGameState('discussion');
     renderMobilePlayer();
 
-    await act(async () => { await new Promise(r => setTimeout(r, 50)); });
-
-    expect(createSTTHandler).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(createSTTHandler).toHaveBeenCalledTimes(1));
 
     act(() => { _triggerSTTResult('不要丢失'); });
 
@@ -214,9 +210,9 @@ describe('MobilePlayer component (AC-8)', () => {
 });
 
 // ============================================================
-// GameDisplay TTS (AC-8) — covers 4 message types
+// GameDisplay TTS — covers 4 message types
 // ============================================================
-describe('GameDisplay TTS (AC-8)', () => {
+describe('GameDisplay TTS', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useWebSocket } from './hooks/useWebSocket.js';
 import Lobby from './components/Lobby.jsx';
 import GameDisplay from './components/GameDisplay.jsx';
-import ConfigPanel from './components/ConfigPanel.jsx';
 
 export default function App() {
   const ws = useWebSocket();

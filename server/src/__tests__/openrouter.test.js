@@ -2,7 +2,7 @@ import { describe, it, expect, afterAll } from 'vitest';
 import { isValidModel, validateApiKey, getAllModels, MODEL_PROVIDERS } from '../ai/openrouter.js';
 
 describe('OpenRouter API', () => {
-  describe('Model validation (AC-5)', () => {
+  describe('Model validation', () => {
     it('supports 6 model providers', () => {
       const providers = Object.keys(MODEL_PROVIDERS);
       expect(providers).toContain('chatgpt');

@@ -101,7 +101,7 @@ describe('Game Engine', () => {
     });
   });
 
-  describe('Model validation (AC-5 negative)', () => {
+  describe('Model validation (negative)', () => {
     it('rejects invalid model IDs in configureGame', () => {
       const roomId = createRoom();
       const room = getRoom(roomId);
@@ -159,7 +159,7 @@ describe('Game Engine', () => {
 
   // Scoring tests moved to scoring.test.js for proper coverage
 
-  describe('Discussion timer broadcast (AC-2/AC-7)', () => {
+  describe('Discussion timer broadcast', () => {
     it('discussion phase_change broadcast includes non-null discussionStartTime', async () => {
       const { roomId, room } = setupRoom();
       await startGame(roomId);
@@ -178,7 +178,7 @@ describe('Game Engine', () => {
       expect(msg.state.round.discussionStartTime).toBeGreaterThan(0);
     });
 
-    it('AI discussion_message broadcasts include state with discussions (AC-2/AC-7)', async () => {
+    it('AI discussion_message broadcasts include state with discussions', async () => {
       const { roomId, room } = setupRoom();
       await startGame(roomId);
 
@@ -200,7 +200,7 @@ describe('Game Engine', () => {
     }, 15000);
   });
 
-  describe('Host answer failure fallback (AC-6)', () => {
+  describe('Host answer failure fallback', () => {
     it('host_answer broadcast includes state even when AI throws', () => {
       const { roomId, room } = setupRoom();
       const state = room.state;
@@ -290,7 +290,7 @@ describe('Game Engine', () => {
     });
   });
 
-  describe('Turn order (AC-2)', () => {
+  describe('Turn order', () => {
     it('rejects questions from non-current speaker', () => {
       const { roomId, room } = setupRoom();
       const state = room.state;
@@ -325,7 +325,7 @@ describe('Game Engine', () => {
     });
   });
 
-  describe('Voting (AC-4)', () => {
+  describe('Voting', () => {
     it('only allows captain to vote', () => {
       const { roomId, room } = setupRoom();
       const state = room.state;

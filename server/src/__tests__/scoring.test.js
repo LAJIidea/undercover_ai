@@ -71,7 +71,7 @@ function setupRoomForScoring() {
   return { roomId, room };
 }
 
-describe('Scoring Logic (AC-4)', () => {
+describe('Scoring Logic', () => {
   it('game team gets +1 for guessing word correctly', () => {
     const { roomId, room } = setupRoomForScoring();
     const state = room.state;

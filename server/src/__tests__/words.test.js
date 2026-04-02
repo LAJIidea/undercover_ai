@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { selectWord, getWordCount, hasAvailableWords } from '../game/words.js';
 
-describe('Word System (AC-9)', () => {
+describe('Word System', () => {
   it('has at least 60 preset words', () => {
     expect(getWordCount()).toBeGreaterThanOrEqual(60);
   });
