@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, BrowserRouter } from 'react-router-dom';
 
 // Mock audio module
@@ -119,9 +119,10 @@ describe('App → Lobby first-screen (AC-7/AC-8)', () => {
       roomCreatedCallback({ roomId: 'ABC123', state: mockWs.gameState });
     });
 
-    // Should show Lobby with room ID, not LoadingScreen
+    // Should show Lobby with room ID, config panel, not LoadingScreen
     expect(screen.getByText('ABC123')).toBeTruthy();
     expect(screen.getByText('游戏大厅')).toBeTruthy();
+    expect(screen.getByText('AI 配置')).toBeTruthy();
     expect(screen.queryByText('加载游戏中...')).toBeNull();
   });
 });
@@ -164,10 +165,7 @@ describe('MobilePlayer component (AC-8)', () => {
     mockWs.gameState = makeGameState('discussion');
     renderMobilePlayer();
 
-    await act(async () => { await new Promise(r => setTimeout(r, 50)); });
-
-    // createSTTHandler MUST have been called
-    expect(createSTTHandler).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(createSTTHandler).toHaveBeenCalledTimes(1));
 
     // Trigger recognition result directly via captured callback
     act(() => { _triggerSTTResult('我觉得是食物'); });
