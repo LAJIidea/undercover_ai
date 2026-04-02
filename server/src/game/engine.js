@@ -410,20 +410,19 @@ function calculateRoundScores(room) {
     round.scores.observeTeam += 1;
   }
 
-  // "Both teams failed to find omniscient" bonus: compare consecutive round pairs
-  // This rule compares rounds where the same teams had swapped roles.
-  // We check pairs: (round 1, round 2), (round 2, round 3), etc.
-  // When both rounds in a pair have voteCorrect=false, fewer questions wins +1.
+  // "Both teams failed to find omniscient" bonus: compare with previous round.
+  // Rule: When both the current round AND the previous round have voteCorrect=false,
+  // the team that used fewer questions gets +1.
+  // Each round can participate as "previous" in at most one comparison,
+  // but can always be the "current" round in a new comparison.
+  // We track this via `usedAsPrevForBonus` on the previous round only.
   if (!round.voteCorrect && state.rounds.length >= 2) {
     const prevRound = state.rounds[state.rounds.length - 2];
-    if (!prevRound.voteCorrect && !prevRound.fewerQuestionsSettled) {
-      // Both failed to find omniscient - fewer questions wins
+    if (!prevRound.voteCorrect && !prevRound.usedAsPrevForBonus) {
       let bonusTeamType = null;
       if (round.questionCount < prevRound.questionCount) {
-        // Current round's game team used fewer questions
         bonusTeamType = round.gameTeamType;
       } else if (prevRound.questionCount < round.questionCount) {
-        // Previous round's game team used fewer questions
         bonusTeamType = prevRound.gameTeamType;
       }
       // Equal question counts = no bonus
@@ -435,9 +434,9 @@ function calculateRoundScores(room) {
           state.scores.human += 1;
         }
       }
-      // Mark both rounds as settled so we don't double-count
-      round.fewerQuestionsSettled = true;
-      prevRound.fewerQuestionsSettled = true;
+      // Mark only the previous round so it can't be used as "prev" again,
+      // but the current round is NOT marked - it can still be "prev" for the next round.
+      prevRound.usedAsPrevForBonus = true;
     }
   }
 

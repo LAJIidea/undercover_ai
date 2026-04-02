@@ -148,30 +148,7 @@ describe('Game Engine', () => {
     });
   });
 
-  describe('Scoring (AC-4)', () => {
-    it('awards +1 to game team when word is guessed correctly', async () => {
-      const { roomId, room } = setupRoom();
-      await startGame(roomId);
-
-      // Wait for state machine to advance
-      await new Promise(r => setTimeout(r, 100));
-      const state = room.state;
-
-      // Manually advance to questioning for testing
-      // Force phase and round state for direct testing
-      const round = state.rounds[0];
-      if (round) {
-        round.guessAttempt = '苹果';
-        round.guessCorrect = true;
-        round.voteTarget = round.gameTeamPlayers[0];
-        round.voteCorrect = false;
-
-        // Verify scoring logic
-        expect(round.guessCorrect).toBe(true);
-        expect(round.voteCorrect).toBe(false);
-      }
-    });
-  });
+  // Scoring tests moved to scoring.test.js for proper coverage
 
   describe('Public state filtering', () => {
     it('hides word from non-omniscient game team members', () => {

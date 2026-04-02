@@ -21,6 +21,17 @@ apiRouter.get('/health', (req, res) => {
   });
 });
 
+// STT config endpoint - exposes FunASR connection info to clients
+apiRouter.get('/stt-config', (req, res) => {
+  const url = process.env.FUNASR_API_URL || '';
+  const key = process.env.FUNASR_API_KEY || '';
+  res.json({
+    available: !!(url && key),
+    url: url,
+    key: key,
+  });
+});
+
 // TTS endpoint
 apiRouter.post('/tts', async (req, res) => {
   const { text, voice } = req.body;

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useWebSocket } from '../hooks/useWebSocket.js';
-import { createSTTConnection } from '../utils/audio.js';
+import { createSTTHandler } from '../utils/audio.js';
 
 export default function MobilePlayer() {
   const { roomId } = useParams();
@@ -9,6 +9,7 @@ export default function MobilePlayer() {
   const [joining, setJoining] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [textInput, setTextInput] = useState('');
+  const [sttStatus, setSttStatus] = useState('');
   const sttRef = useRef(null);
   const ws = useWebSocket();
 
@@ -27,15 +28,29 @@ export default function MobilePlayer() {
     if (ws.error) setJoining(false);
   }, [ws.error]);
 
-  // Initialize STT connection on join
+  // Initialize STT on join: try FunASR first, fallback to browser
   useEffect(() => {
     if (!joined) return;
-    const stt = createSTTConnection(null, null, (text) => {
-      setTextInput(text);
-      setIsRecording(false);
+    let cancelled = false;
+
+    createSTTHandler(
+      (text) => {
+        setTextInput(text);
+        setIsRecording(false);
+      },
+      (errMsg) => setSttStatus(errMsg),
+    ).then((handler) => {
+      if (cancelled) { handler.close(); return; }
+      sttRef.current = handler;
+      setSttStatus(handler.isBrowserFallback
+        ? '使用浏览器语音识别'
+        : 'FunASR已连接');
     });
-    sttRef.current = stt;
-    return () => stt?.close?.();
+
+    return () => {
+      cancelled = true;
+      sttRef.current?.close();
+    };
   }, [joined]);
 
   const state = ws.gameState;
@@ -43,19 +58,19 @@ export default function MobilePlayer() {
   const myRole = round?.myRole;
   const phase = state?.phase;
 
-  const startVoiceInput = () => {
+  const startVoiceInput = async () => {
     const stt = sttRef.current;
-    if (stt?.isBrowserFallback) {
-      stt.start();
-    } else if (stt?.start) {
-      stt.start();
+    if (!stt) return;
+    try {
+      await stt.start();
+      setIsRecording(true);
+    } catch {
+      setSttStatus('麦克风启动失败');
     }
-    setIsRecording(true);
   };
 
   const stopVoiceInput = () => {
-    const stt = sttRef.current;
-    if (stt?.stop) stt.stop();
+    sttRef.current?.stop();
     setIsRecording(false);
   };
 
@@ -189,6 +204,9 @@ export default function MobilePlayer() {
       {(phase === 'discussion' || phase === 'questioning') &&
        (myRole === 'guesser' || myRole === 'omniscient') && (
         <div className="space-y-2">
+          {sttStatus && (
+            <p className="text-xs text-gray-500 text-center">{sttStatus}</p>
+          )}
           <div className="flex gap-2">
             <input
               type="text"

@@ -61,8 +61,18 @@ describe('OpenRouter API', () => {
       expect(validateApiKey()).toContain('not configured');
     });
 
-    it('returns null when API key is set', () => {
-      process.env.OPENROUTER_API_KEY = 'sk-real-key-123';
+    it('returns error when API key has wrong prefix', () => {
+      process.env.OPENROUTER_API_KEY = 'definitely-not-a-real-openrouter-key';
+      expect(validateApiKey()).toContain('format is invalid');
+    });
+
+    it('returns error when API key is too short', () => {
+      process.env.OPENROUTER_API_KEY = 'sk-or-short';
+      expect(validateApiKey()).toContain('format is invalid');
+    });
+
+    it('returns null when API key has correct format', () => {
+      process.env.OPENROUTER_API_KEY = 'sk-or-v1-abcdef1234567890abcdef';
       expect(validateApiKey()).toBeNull();
     });
 

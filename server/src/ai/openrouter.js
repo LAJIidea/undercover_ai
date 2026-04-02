@@ -71,6 +71,10 @@ export function validateApiKey() {
   if (!apiKey || apiKey === 'your_openrouter_api_key_here') {
     return 'OPENROUTER_API_KEY is not configured. Please set it in .env file.';
   }
+  // OpenRouter keys start with "sk-or-" and are at least 20 chars
+  if (!apiKey.startsWith('sk-or-') || apiKey.length < 20) {
+    return 'OPENROUTER_API_KEY format is invalid. Keys should start with "sk-or-".';
+  }
   return null;
 }
 
