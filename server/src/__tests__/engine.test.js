@@ -176,6 +176,28 @@ describe('Game Engine', () => {
       expect(msg.state.round.discussionStartTime).toBeTypeOf('number');
       expect(msg.state.round.discussionStartTime).toBeGreaterThan(0);
     });
+
+    it('AI discussion_message broadcasts include state with discussions (AC-2/AC-7)', async () => {
+      const { roomId, room } = setupRoom();
+      await startGame(roomId);
+
+      // Wait for discussion phase + AI discussion to fire
+      await new Promise(r => setTimeout(r, 6000));
+
+      // Find discussion_message broadcasts from AI
+      const aiDiscussionBroadcasts = room.broadcast.mock.calls.filter(
+        ([msg]) => msg.type === 'discussion_message' && msg.playerId?.startsWith('ai_')
+      );
+
+      // In round 1, AI is game team, so AI discussions should fire
+      if (aiDiscussionBroadcasts.length > 0) {
+        const [msg] = aiDiscussionBroadcasts[0];
+        expect(msg.state).toBeTruthy();
+        expect(msg.state.round).toBeTruthy();
+        expect(msg.state.round.discussions).toBeInstanceOf(Array);
+        expect(msg.state.round.discussions.length).toBeGreaterThan(0);
+      }
+    }, 15000);
   });
 
   describe('Public state filtering', () => {

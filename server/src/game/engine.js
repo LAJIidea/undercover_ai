@@ -493,7 +493,7 @@ async function triggerAIDiscussion(room) {
         model: aiPlayer.model,
       });
       round.discussions.push({ playerId, message, timestamp: Date.now() });
-      room.broadcast?.({ type: 'discussion_message', playerId, message });
+      room.broadcast?.({ type: 'discussion_message', playerId, message, state: getPublicState(room.state) });
     } catch (err) {
       console.error(`AI discussion error for ${playerId}:`, err);
     }
@@ -519,7 +519,7 @@ async function triggerAIDiscussionMini(room) {
         brief: true,
       });
       round.discussions.push({ playerId, message, timestamp: Date.now() });
-      room.broadcast?.({ type: 'discussion_message', playerId, message });
+      room.broadcast?.({ type: 'discussion_message', playerId, message, state: getPublicState(room.state) });
     } catch (err) {
       console.error(`AI mini discussion error for ${playerId}:`, err);
     }
