@@ -28,6 +28,34 @@ export default function MobilePlayer() {
     if (ws.error) setJoining(false);
   }, [ws.error]);
 
+  const state = ws.gameState;
+  const round = state?.round;
+  const myRole = round?.myRole;
+  const phase = state?.phase;
+
+  // Keep refs for auto-send from STT callback (which is set up once)
+  const phaseRef = useRef(phase);
+  const wsRef = useRef(ws);
+  useEffect(() => { phaseRef.current = phase; }, [phase]);
+  useEffect(() => { wsRef.current = ws; }, [ws]);
+
+  // Auto-send function for voice recognition results
+  const autoSendVoiceResult = useRef((text) => {
+    if (!text.trim()) return;
+    const currentPhase = phaseRef.current;
+    const currentWs = wsRef.current;
+    if (currentPhase === 'discussion') {
+      currentWs.send({ type: 'discuss', message: text.trim() });
+    } else if (currentPhase === 'questioning') {
+      currentWs.send({ type: 'question', question: text.trim() });
+    } else {
+      // Outside active phases, just fill the text box
+      setTextInput(text);
+      return;
+    }
+    setTextInput(''); // Clear after auto-send
+  });
+
   // Initialize STT on join: try FunASR first, fallback to browser
   useEffect(() => {
     if (!joined) return;
@@ -35,8 +63,8 @@ export default function MobilePlayer() {
 
     createSTTHandler(
       (text) => {
-        setTextInput(text);
         setIsRecording(false);
+        autoSendVoiceResult.current(text);
       },
       (errMsg) => setSttStatus(errMsg),
     ).then((handler) => {
@@ -52,11 +80,6 @@ export default function MobilePlayer() {
       sttRef.current?.close();
     };
   }, [joined]);
-
-  const state = ws.gameState;
-  const round = state?.round;
-  const myRole = round?.myRole;
-  const phase = state?.phase;
 
   const startVoiceInput = async () => {
     const stt = sttRef.current;

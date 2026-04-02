@@ -60,22 +60,12 @@ class FunASRHandler {
 
       this.ws.onopen = () => {
         clearTimeout(timeout);
-        // Send initial config message (FunASR protocol)
-        this.ws.send(JSON.stringify({
-          mode: 'online',
-          chunk_size: [5, 10, 5],
-          wav_name: 'microphone',
-          is_speaking: true,
-          wav_format: 'pcm',
-          audio_fs: 16000,
-        }));
         resolve();
       };
 
       this.ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          // FunASR returns text in "text" field
           if (data.text && data.text.trim()) {
             this.onResult(data.text.trim());
           }
@@ -96,6 +86,18 @@ class FunASRHandler {
   }
 
   async start() {
+    // Signal new speech segment to FunASR each time
+    if (this.ws?.readyState === 1) {
+      this.ws.send(JSON.stringify({
+        mode: 'online',
+        chunk_size: [5, 10, 5],
+        wav_name: 'microphone',
+        is_speaking: true,
+        wav_format: 'pcm',
+        audio_fs: 16000,
+      }));
+    }
+
     try {
       this.stream = await navigator.mediaDevices.getUserMedia({
         audio: { sampleRate: 16000, channelCount: 1, echoCancellation: true },

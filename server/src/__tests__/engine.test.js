@@ -13,6 +13,7 @@ vi.mock('../ai/agent-manager.js', () => ({
 vi.mock('../ai/openrouter.js', () => ({
   isValidModel: vi.fn(() => true),
   validateApiKey: vi.fn(() => null),
+  preflightApiKeyCheck: vi.fn(async () => null),
   callOpenRouter: vi.fn(async () => '测试词语'),
   getAllModels: vi.fn(() => []),
   MODEL_PROVIDERS: {},
@@ -23,7 +24,7 @@ import {
   submitQuestion, submitGuess, submitVote, submitDiscussion,
   getPublicState,
 } from '../game/engine.js';
-import { isValidModel, validateApiKey } from '../ai/openrouter.js';
+import { isValidModel, validateApiKey, preflightApiKeyCheck } from '../ai/openrouter.js';
 
 function setupRoom() {
   const roomId = createRoom();
@@ -116,6 +117,13 @@ describe('Game Engine', () => {
       validateApiKey.mockReturnValueOnce('OPENROUTER_API_KEY is not configured');
 
       await expect(startGame(roomId)).rejects.toThrow('OPENROUTER_API_KEY is not configured');
+    });
+
+    it('rejects format-valid but actually-invalid API key via preflight', async () => {
+      const { roomId } = setupRoom();
+      preflightApiKeyCheck.mockResolvedValueOnce('OpenRouter API key is not valid (HTTP 401)');
+
+      await expect(startGame(roomId)).rejects.toThrow('OpenRouter API key is not valid');
     });
   });
 

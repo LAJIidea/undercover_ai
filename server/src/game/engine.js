@@ -9,7 +9,7 @@ import {
 } from './state.js';
 import { selectWord, hasAvailableWords } from './words.js';
 import { getAIResponse } from '../ai/agent-manager.js';
-import { isValidModel, validateApiKey } from '../ai/openrouter.js';
+import { isValidModel, validateApiKey, preflightApiKeyCheck } from '../ai/openrouter.js';
 
 const rooms = new Map();
 
@@ -69,6 +69,7 @@ export function getPublicState(state, playerId = null) {
     questionCount: round.questionCount,
     currentSpeakerIndex: round.currentSpeakerIndex,
     questionStartTime: round.questionStartTime,
+    discussionStartTime: round.discussionStartTime,
     guessAttempt: round.guessAttempt,
     guessCorrect: state.phase === GamePhase.ROUND_RESULT ? round.guessCorrect : undefined,
     voteTarget: state.phase === GamePhase.ROUND_RESULT ? round.voteTarget : undefined,
@@ -167,9 +168,13 @@ export async function startGame(roomId) {
     throw new Error(`Invalid host model: ${room.state.aiConfig.hostModel}`);
   }
 
-  // Validate OpenRouter API key
+  // Validate OpenRouter API key format
   const keyError = validateApiKey();
   if (keyError) throw new Error(keyError);
+
+  // Pre-flight: verify key is actually usable with a real API call
+  const preflightError = await preflightApiKeyCheck();
+  if (preflightError) throw new Error(preflightError);
 
   // Validate word source availability
   if (!hasAvailableWords(room.state.wordConfig)) {
@@ -211,8 +216,10 @@ async function startRound(room) {
 function startDiscussion(room) {
   transition(room, GamePhase.DISCUSSION);
 
-  // Start AI discussion if AI is game team
   const round = getCurrentRound(room.state);
+  round.discussionStartTime = Date.now();
+
+  // Start AI discussion if AI is game team
   if (round.gameTeamType === 'ai') {
     triggerAIDiscussion(room);
   }

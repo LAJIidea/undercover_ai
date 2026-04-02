@@ -78,6 +78,25 @@ export function validateApiKey() {
   return null;
 }
 
+// Lightweight pre-flight check: call OpenRouter /auth/key to verify key is usable
+export async function preflightApiKeyCheck() {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) return 'OPENROUTER_API_KEY not configured';
+
+  try {
+    const response = await fetch('https://openrouter.ai/api/v1/auth/key', {
+      headers: { 'Authorization': `Bearer ${apiKey}` },
+    });
+    if (!response.ok) {
+      const body = await response.text().catch(() => '');
+      return `OpenRouter API key is not valid (HTTP ${response.status}): ${body}`.slice(0, 200);
+    }
+    return null; // Key is valid
+  } catch (err) {
+    return `Cannot reach OpenRouter API: ${err.message}`;
+  }
+}
+
 export async function callOpenRouter(modelId, messages, options = {}) {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) throw new Error('OPENROUTER_API_KEY not configured');

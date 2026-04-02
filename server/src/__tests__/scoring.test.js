@@ -13,6 +13,7 @@ vi.mock('../ai/agent-manager.js', () => ({
 vi.mock('../ai/openrouter.js', () => ({
   isValidModel: vi.fn(() => true),
   validateApiKey: vi.fn(() => null),
+  preflightApiKeyCheck: vi.fn(async () => null),
   callOpenRouter: vi.fn(async () => '测试词语'),
   getAllModels: vi.fn(() => []),
   MODEL_PROVIDERS: {},

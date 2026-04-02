@@ -97,7 +97,9 @@ export default function GameDisplay({ roomId, ws }) {
             {/* Timer */}
             {(state.phase === 'questioning' || state.phase === 'discussion') && (
               <Timer
-                startTime={state.phase === 'questioning' ? round.questionStartTime : null}
+                startTime={state.phase === 'questioning'
+                  ? round.questionStartTime
+                  : round.discussionStartTime || null}
                 duration={state.phase === 'questioning' ? 7 * 60 * 1000 : 45 * 1000}
               />
             )}
