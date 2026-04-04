@@ -299,10 +299,9 @@ export default function MobilePlayer() {
 
           <div className="flex gap-2">
             <button
-              onTouchStart={startVoiceInput}
-              onTouchEnd={stopVoiceInput}
-              onMouseDown={startVoiceInput}
-              onMouseUp={stopVoiceInput}
+              onPointerDown={startVoiceInput}
+              onPointerUp={stopVoiceInput}
+              onPointerCancel={stopVoiceInput}
               className={`flex-1 py-4 rounded-xl font-medium text-lg transition-all
                 ${isRecording
                   ? 'bg-red-600 text-white scale-95'

@@ -275,8 +275,10 @@ async function startRound(room) {
     transition(room, GamePhase.WORD_ASSIGNMENT);
   } catch (err) {
     console.error('Failed to create round state:', err);
-    // If all humans disconnected, end the game gracefully
     transition(room, GamePhase.GAME_OVER);
+    room.timers.cleanup = setTimeout(() => {
+      deleteRoom(state.roomId);
+    }, 60000);
     return;
   }
 
@@ -615,6 +617,10 @@ export function calculateRoundScores(room) {
     if (state.currentRound >= state.totalRounds) {
       transition(room, GamePhase.GAME_OVER);
       room.broadcast?.({ type: 'game_over', state: getPublicState(room.state) });
+      // Clean up room after delay to allow clients to see final state
+      room.timers.cleanup = setTimeout(() => {
+        deleteRoom(state.roomId);
+      }, 60000); // 1 minute grace period
     } else {
       transition(room, GamePhase.ROUND_START);
       startRound(room);

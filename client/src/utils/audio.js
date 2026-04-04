@@ -242,7 +242,13 @@ export async function playTTS(text) {
     const audioBlob = await response.blob();
     const audioUrl = URL.createObjectURL(audioBlob);
     const audio = new Audio(audioUrl);
-    audio.play();
+    try {
+      await audio.play();
+    } catch {
+      // Autoplay blocked - fall back to browser TTS
+      URL.revokeObjectURL(audioUrl);
+      return playBrowserTTS(text);
+    }
     audio.onended = () => URL.revokeObjectURL(audioUrl);
   } catch {
     playBrowserTTS(text);
