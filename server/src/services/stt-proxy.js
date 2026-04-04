@@ -15,6 +15,7 @@ export function setupSTTProxy(server) {
 
   wss.on('connection', (clientWs) => {
     let funasrWs = null;
+    let messageBuffer = [];
 
     try {
       const separator = url.includes('?') ? '&' : '?';
@@ -22,13 +23,21 @@ export function setupSTTProxy(server) {
       funasrWs = new WebSocket(authenticatedUrl);
       funasrWs.binaryType = 'arraybuffer';
 
+      // Buffer client messages until FunASR connects
+      clientWs.on('message', (data) => {
+        if (funasrWs.readyState === WebSocket.OPEN) {
+          funasrWs.send(data);
+        } else {
+          messageBuffer.push(data);
+        }
+      });
+
       funasrWs.on('open', () => {
-        // Relay client messages to FunASR
-        clientWs.on('message', (data) => {
-          if (funasrWs.readyState === WebSocket.OPEN) {
-            funasrWs.send(data);
-          }
-        });
+        // Flush buffered messages
+        for (const data of messageBuffer) {
+          funasrWs.send(data);
+        }
+        messageBuffer = [];
       });
 
       funasrWs.on('message', (data) => {

@@ -233,15 +233,21 @@ async function startRound(room) {
     return;
   }
 
-  const round = createRoundState(state.currentRound, state);
+  try {
+    const round = createRoundState(state.currentRound, state);
 
-  // Select word
-  const { word, category } = await selectWord(state.wordConfig, state.aiConfig.hostModel);
-  round.word = word;
-  round.wordCategory = category;
+    // Select word
+    const { word, category } = await selectWord(state.wordConfig, state.aiConfig.hostModel);
+    round.word = word;
+    round.wordCategory = category;
 
-  state.rounds.push(round);
-  transition(room, GamePhase.WORD_ASSIGNMENT);
+    state.rounds.push(round);
+    transition(room, GamePhase.WORD_ASSIGNMENT);
+  } catch (err) {
+    console.error('Failed to create round state:', err);
+    // If all humans disconnected, end the game gracefully
+    transition(room, GamePhase.GAME_OVER);
+  }
 
   // Brief pause for word assignment display, then move to discussion
   room.timers.wordAssignment = setTimeout(() => {

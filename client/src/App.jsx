@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useWebSocket } from './hooks/useWebSocket.js';
 import Lobby from './components/Lobby.jsx';
 import GameDisplay from './components/GameDisplay.jsx';
@@ -14,6 +14,13 @@ export default function App() {
       if (msg.state) ws.setGameState(msg.state);
     });
   };
+
+  // Recover state after reconnect if we have roomId but no gameState
+  useEffect(() => {
+    if (roomId && ws.connected && !ws.gameState) {
+      ws.send({ type: 'get_state' });
+    }
+  }, [roomId, ws.connected, ws.gameState, ws]);
 
   const phase = ws.gameState?.phase;
 
