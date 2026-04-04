@@ -52,10 +52,13 @@ export default function MobilePlayer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ws.connected, ws.playerId]);
 
-  // Reset joining state on error
+  // Reset joining state on error or success
   useEffect(() => {
     if (ws.error) setJoining(false);
   }, [ws.error]);
+  useEffect(() => {
+    if (joined) setJoining(false);
+  }, [joined]);
 
   const state = ws.gameState;
   const round = state?.round;

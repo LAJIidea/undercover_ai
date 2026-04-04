@@ -392,6 +392,7 @@ export function submitQuestion(roomId, playerId, question) {
 
   round.waitingForAnswer = true;
   round.questionCount++;
+  const speakerIndexAtQuestion = round.currentSpeakerIndex;
   round.questions.push({
     playerId,
     question,
@@ -401,6 +402,9 @@ export function submitQuestion(roomId, playerId, question) {
 
   // Get host AI answer, then advance speaker
   answerQuestion(room, question, round.questions.length - 1).then(() => {
+    round.waitingForAnswer = false;
+    // Only advance if the speaker index hasn't already been moved (e.g. by disconnect handler)
+    if (round.currentSpeakerIndex !== speakerIndexAtQuestion) return;
     // Advance to next connected speaker after answer is received
     let nextIndex = (round.currentSpeakerIndex + 1) % round.gameTeamPlayers.length;
     let attempts = 0;
@@ -414,7 +418,6 @@ export function submitQuestion(roomId, playerId, question) {
       nextIndex = (nextIndex + 1) % round.gameTeamPlayers.length;
       attempts++;
     }
-    round.waitingForAnswer = false;
     room.broadcast?.({ type: 'speaker_advanced', state: getPublicState(room.state) });
   });
 

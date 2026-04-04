@@ -33,6 +33,10 @@ export function setupSTTProxy(server) {
       });
 
       funasrWs.on('open', () => {
+        // Notify client that upstream is ready
+        if (clientWs.readyState === WebSocket.OPEN) {
+          clientWs.send(JSON.stringify({ type: 'ready' }));
+        }
         // Flush buffered messages
         for (const data of messageBuffer) {
           funasrWs.send(data);
