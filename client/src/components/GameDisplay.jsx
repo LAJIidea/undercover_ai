@@ -15,7 +15,7 @@ const PHASE_LABELS = {
   game_over: '游戏结束',
 };
 
-export default function GameDisplay({ roomId, ws }) {
+export default function GameDisplay({ roomId, ws, onNewGame }) {
   const state = ws.gameState;
   const round = state?.round;
   const [ttsEnabled, setTtsEnabled] = useState(true);
@@ -149,7 +149,7 @@ export default function GameDisplay({ roomId, ws }) {
 
         {/* Game over overlay */}
         {state.phase === 'game_over' && (
-          <GameOver scores={state.scores} />
+          <GameOver scores={state.scores} onNewGame={onNewGame} />
         )}
       </div>
 
@@ -212,7 +212,7 @@ function RoundResult({ round, scores }) {
   );
 }
 
-function GameOver({ scores }) {
+function GameOver({ scores, onNewGame }) {
   const aiWins = (scores?.ai || 0) > (scores?.human || 0);
   const tie = (scores?.ai || 0) === (scores?.human || 0);
   return (
@@ -238,6 +238,14 @@ function GameOver({ scores }) {
             <p className="text-blue-400 text-5xl font-bold">{scores?.human || 0}</p>
           </div>
         </div>
+        {onNewGame && (
+          <button
+            onClick={onNewGame}
+            className="mt-6 px-8 py-3 bg-primary hover:bg-primary-dark rounded-xl font-semibold transition-all"
+          >
+            新游戏
+          </button>
+        )}
       </div>
     </div>
   );

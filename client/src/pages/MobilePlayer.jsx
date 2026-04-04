@@ -18,12 +18,14 @@ export default function MobilePlayer() {
 
   const handleJoin = () => {
     if (!playerName.trim()) return;
-    setJoining(true);
     ws.clearError();
-    // Try to get stored reconnectToken for this room+name
     const storageKey = `reconnectToken_${roomId}_${playerName.trim()}`;
     const reconnectToken = localStorage.getItem(storageKey);
-    ws.send({ type: 'join_room', roomId, playerName: playerName.trim(), clientType: 'player', reconnectToken });
+    const sent = ws.send({ type: 'join_room', roomId, playerName: playerName.trim(), clientType: 'player', reconnectToken });
+    if (sent) {
+      setJoining(true);
+    }
+    // If send fails (ws not ready), joining stays false and button remains enabled
   };
 
   // Store reconnectToken when received

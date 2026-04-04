@@ -205,6 +205,8 @@ export function setupWebSocket(server) {
             type: 'state_update',
             state: getPublicState(room.state, client.playerId),
           });
+        } else {
+          sendError(ws, 'Room not found or expired');
         }
         break;
       }

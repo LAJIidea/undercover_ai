@@ -33,6 +33,18 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId, ws.connected, ws.gameState]);
 
+  // If we get an error while trying to recover a room, clear stale state
+  useEffect(() => {
+    if (ws.error && roomId && !ws.gameState) {
+      localStorage.removeItem('currentRoomId');
+      if (roomId) localStorage.removeItem(`hostToken_${roomId}`);
+      setRoomId(null);
+      setHostToken(null);
+      ws.clearError();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ws.error]);
+
   const phase = ws.gameState?.phase;
 
   // Clear persisted room state when game is over so next refresh starts fresh
@@ -42,6 +54,12 @@ export default function App() {
       if (roomId) localStorage.removeItem(`hostToken_${roomId}`);
     }
   }, [phase, roomId]);
+
+  const handleNewGame = () => {
+    setRoomId(null);
+    setHostToken(null);
+    ws.setGameState(null);
+  };
 
   if (!roomId) {
     return (
@@ -72,5 +90,5 @@ export default function App() {
     return <Lobby roomId={roomId} ws={ws} />;
   }
 
-  return <GameDisplay roomId={roomId} ws={ws} />;
+  return <GameDisplay roomId={roomId} ws={ws} onNewGame={handleNewGame} />;
 }
