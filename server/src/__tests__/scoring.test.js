@@ -53,7 +53,7 @@ function createTestRound(roundNumber, opts = {}) {
 }
 
 function setupRoomForScoring() {
-  const roomId = createRoom();
+  const { roomId } = createRoom();
   const room = getRoom(roomId);
   room.broadcast = vi.fn();
 

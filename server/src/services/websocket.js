@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import {
   createRoom, getRoom, joinRoom, configureGame,
   startGame, submitDiscussion, submitQuestion,
-  submitGuess, submitVote, getPublicState,
+  submitGuess, submitVote, getPublicState, endRound,
 } from '../game/engine.js';
 
 const clients = new Map(); // ws -> { id, roomId, type }
@@ -51,7 +51,6 @@ export function setupWebSocket(server) {
                 const targetId = round.gameTeamPlayers[Math.floor(Math.random() * round.gameTeamPlayers.length)];
                 round.voteTarget = targetId;
                 // Trigger round result immediately
-                const { endRound } = await import('../game/engine.js');
                 endRound(room);
               }
             }
@@ -96,12 +95,14 @@ export function setupWebSocket(server) {
 
     switch (msg.type) {
       case 'create_room': {
-        const roomId = createRoom(client.id);
+        const result = createRoom(client.id);
+        const roomId = result.roomId;
+        const hostToken = result.hostToken;
         client.roomId = roomId;
         client.type = msg.clientType || 'display';
         const room = getRoom(roomId);
         room.broadcast = (data) => broadcastToRoom(roomId, data);
-        send(ws, { type: 'room_created', roomId, state: getPublicState(room.state) });
+        send(ws, { type: 'room_created', roomId, hostToken, state: getPublicState(room.state) });
         break;
       }
 
@@ -188,8 +189,11 @@ export function setupWebSocket(server) {
           if (!client.roomId && roomId) {
             client.roomId = roomId;
             client.type = msg.clientType || 'display';
-            // Do not update room.hostId here - it would allow arbitrary clients to hijack host privileges
-            // The original host maintains hostId from create_room; if they lose connection, they lose host status
+            // If display reconnecting with valid hostToken, restore host privileges
+            if (client.type === 'display' && msg.hostToken && msg.hostToken === room.hostToken) {
+              room.hostId = client.id;
+              console.log('Host reconnected, privileges restored');
+            }
           }
           send(ws, {
             type: 'state_update',

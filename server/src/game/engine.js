@@ -15,9 +15,10 @@ const rooms = new Map();
 
 export function createRoom(hostId) {
   const roomId = uuidv4().slice(0, 6).toUpperCase();
+  const hostToken = uuidv4();
   const state = createInitialGameState(roomId);
-  rooms.set(roomId, { state, broadcast: null, timers: {}, hostId });
-  return roomId;
+  rooms.set(roomId, { state, broadcast: null, timers: {}, hostId, hostToken });
+  return { roomId, hostToken };
 }
 
 export function getRoom(roomId) {
@@ -55,6 +56,16 @@ export function getPublicState(state, playerId = null) {
     humanPlayers: state.humanPlayers.map(p => ({
       id: p.id, name: p.name, connected: p.connected,
     })),
+    aiConfig: {
+      players: state.aiConfig.players.map(p => ({
+        model: p.model, personality: p.personality,
+      })),
+      hostModel: state.aiConfig.hostModel,
+    },
+    wordConfig: {
+      mode: state.wordConfig.mode,
+      aiRatio: state.wordConfig.aiRatio,
+    },
   };
 
   if (!round) return base;
@@ -354,11 +365,12 @@ export function submitQuestion(roomId, playerId, question) {
     timestamp: Date.now(),
   });
 
-  // Get host AI answer
-  answerQuestion(room, question, round.questions.length - 1);
-
-  // Advance to next speaker
-  round.currentSpeakerIndex = (round.currentSpeakerIndex + 1) % round.gameTeamPlayers.length;
+  // Get host AI answer, then advance speaker
+  answerQuestion(room, question, round.questions.length - 1).then(() => {
+    // Advance to next speaker after answer is received
+    round.currentSpeakerIndex = (round.currentSpeakerIndex + 1) % round.gameTeamPlayers.length;
+    room.broadcast?.({ type: 'speaker_advanced', state: getPublicState(room.state) });
+  });
 
   // Start discussion before next question
   room.broadcast?.({ type: 'question_submitted', state: getPublicState(room.state) });

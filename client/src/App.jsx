@@ -6,11 +6,16 @@ import GameDisplay from './components/GameDisplay.jsx';
 export default function App() {
   const ws = useWebSocket();
   const [roomId, setRoomId] = useState(null);
+  const [hostToken, setHostToken] = useState(null);
 
   const handleCreateRoom = () => {
     ws.send({ type: 'create_room' });
     ws.on('room_created', (msg) => {
       setRoomId(msg.roomId);
+      setHostToken(msg.hostToken);
+      if (msg.hostToken) {
+        localStorage.setItem(`hostToken_${msg.roomId}`, msg.hostToken);
+      }
       if (msg.state) ws.setGameState(msg.state);
     });
   };
@@ -18,7 +23,8 @@ export default function App() {
   // Recover state after reconnect if we have roomId but no gameState
   useEffect(() => {
     if (roomId && ws.connected && !ws.gameState) {
-      ws.send({ type: 'get_state', roomId, clientType: 'display' });
+      const token = hostToken || localStorage.getItem(`hostToken_${roomId}`);
+      ws.send({ type: 'get_state', roomId, clientType: 'display', hostToken: token });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId, ws.connected, ws.gameState]);

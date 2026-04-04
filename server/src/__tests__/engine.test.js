@@ -28,7 +28,7 @@ import { isValidModel, validateApiKey, preflightApiKeyCheck } from '../ai/openro
 import { getAIResponse } from '../ai/agent-manager.js';
 
 function setupRoom() {
-  const roomId = createRoom();
+  const { roomId } = createRoom();
   const room = getRoom(roomId);
   room.broadcast = vi.fn();
 
@@ -54,13 +54,14 @@ function setupRoom() {
 describe('Game Engine', () => {
   describe('Room management', () => {
     it('creates a room', () => {
-      const roomId = createRoom();
-      expect(roomId).toBeTruthy();
-      expect(getRoom(roomId)).toBeTruthy();
+      const result = createRoom();
+      expect(result.roomId).toBeTruthy();
+      expect(result.hostToken).toBeTruthy();
+      expect(getRoom(result.roomId)).toBeTruthy();
     });
 
     it('allows joining during WAITING phase', () => {
-      const roomId = createRoom();
+      const { roomId } = createRoom();
       const room = getRoom(roomId);
       room.broadcast = vi.fn();
 
@@ -69,7 +70,7 @@ describe('Game Engine', () => {
     });
 
     it('allows joining during CONFIGURING phase', () => {
-      const roomId = createRoom();
+      const { roomId } = createRoom();
       const room = getRoom(roomId);
       room.broadcast = vi.fn();
 
@@ -89,7 +90,7 @@ describe('Game Engine', () => {
     });
 
     it('rejects joining a full room', () => {
-      const roomId = createRoom();
+      const { roomId } = createRoom();
       const room = getRoom(roomId);
       room.broadcast = vi.fn();
 
@@ -103,7 +104,7 @@ describe('Game Engine', () => {
 
   describe('Model validation (negative)', () => {
     it('rejects invalid model IDs in configureGame', () => {
-      const roomId = createRoom();
+      const { roomId } = createRoom();
       const room = getRoom(roomId);
       room.broadcast = vi.fn();
 
@@ -130,7 +131,7 @@ describe('Game Engine', () => {
 
   describe('Game flow', () => {
     it('requires 4 human players to start', async () => {
-      const roomId = createRoom();
+      const { roomId } = createRoom();
       const room = getRoom(roomId);
       room.broadcast = vi.fn();
       joinRoom(roomId, { id: 'p1', name: 'Alice' });
@@ -146,7 +147,7 @@ describe('Game Engine', () => {
     });
 
     it('requires all AI models configured to start', async () => {
-      const roomId = createRoom();
+      const { roomId } = createRoom();
       const room = getRoom(roomId);
       room.broadcast = vi.fn();
       for (let i = 0; i < 4; i++) {
