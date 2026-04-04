@@ -82,6 +82,11 @@ export function createRoundState(roundNumber, gameState) {
   // Only include connected human players in round participants
   const connectedHumans = gameState.humanPlayers.filter(p => p.connected).map(p => p.id);
 
+  // Guard against all humans disconnecting
+  if (connectedHumans.length === 0) {
+    throw new Error('Cannot create round: no connected human players');
+  }
+
   const gameTeamPlayers = aiIsGameTeam
     ? gameState.aiConfig.players.map(p => p.id)
     : connectedHumans;

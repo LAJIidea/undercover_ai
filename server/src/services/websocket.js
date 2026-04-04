@@ -102,22 +102,22 @@ export function setupWebSocket(server) {
       }
 
       case 'discuss': {
-        submitDiscussion(client.roomId, client.id, msg.message);
+        submitDiscussion(client.roomId, client.playerId, msg.message);
         break;
       }
 
       case 'question': {
-        submitQuestion(client.roomId, client.id, msg.question);
+        submitQuestion(client.roomId, client.playerId, msg.question);
         break;
       }
 
       case 'guess': {
-        submitGuess(client.roomId, client.id, msg.word);
+        submitGuess(client.roomId, client.playerId, msg.word);
         break;
       }
 
       case 'vote': {
-        submitVote(client.roomId, client.id, msg.targetId);
+        submitVote(client.roomId, client.playerId, msg.targetId);
         break;
       }
 
@@ -126,7 +126,7 @@ export function setupWebSocket(server) {
         if (room) {
           send(ws, {
             type: 'state_update',
-            state: getPublicState(room.state, client.id),
+            state: getPublicState(room.state, client.playerId),
           });
         }
         break;
@@ -140,9 +140,9 @@ export function setupWebSocket(server) {
   function broadcastToRoom(roomId, data) {
     for (const [ws, client] of clients) {
       if (client.roomId === roomId && ws.readyState === 1) {
-        // Send personalized state for players
-        if (data.state && client.type === 'player') {
-          const personalData = { ...data, state: getPublicState(getRoom(roomId).state, client.id) };
+        // Send personalized state for players using stable playerId
+        if (data.state && client.type === 'player' && client.playerId) {
+          const personalData = { ...data, state: getPublicState(getRoom(roomId).state, client.playerId) };
           send(ws, personalData);
         } else {
           send(ws, data);

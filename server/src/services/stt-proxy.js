@@ -1,4 +1,4 @@
-import WebSocket from 'ws';
+import WebSocket, { WebSocketServer } from 'ws';
 
 // Server-side WebSocket proxy for FunASR STT
 // Clients connect to /ws-stt, server relays to FunASR with credentials
@@ -11,7 +11,7 @@ export function setupSTTProxy(server) {
     return;
   }
 
-  const wss = new WebSocket.Server({ server, path: '/ws-stt' });
+  const wss = new WebSocketServer({ server, path: '/ws-stt' });
 
   wss.on('connection', (clientWs) => {
     let funasrWs = null;
