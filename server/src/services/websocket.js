@@ -138,8 +138,14 @@ export function setupWebSocket(server) {
       }
 
       case 'get_state': {
-        const room = getRoom(client.roomId);
+        const roomId = msg.roomId || client.roomId;
+        const room = getRoom(roomId);
         if (room) {
+          // Re-associate client with room if not already (for reconnect recovery)
+          if (!client.roomId && roomId) {
+            client.roomId = roomId;
+            client.type = msg.clientType || 'display';
+          }
           send(ws, {
             type: 'state_update',
             state: getPublicState(room.state, client.playerId),

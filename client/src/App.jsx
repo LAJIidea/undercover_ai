@@ -18,7 +18,7 @@ export default function App() {
   // Recover state after reconnect if we have roomId but no gameState
   useEffect(() => {
     if (roomId && ws.connected && !ws.gameState) {
-      ws.send({ type: 'get_state' });
+      ws.send({ type: 'get_state', roomId, clientType: 'display' });
     }
   }, [roomId, ws.connected, ws.gameState, ws]);
 
