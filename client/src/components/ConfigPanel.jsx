@@ -17,6 +17,26 @@ export default function ConfigPanel({ ws }) {
     fetch('/api/models').then(r => r.json()).then(setModels).catch(() => {});
   }, []);
 
+  // Initialize from gameState when available (including after reconnect)
+  useEffect(() => {
+    const state = ws.gameState;
+    if (state?.aiConfig) {
+      if (state.aiConfig.players?.length === 4) {
+        setAiConfig(state.aiConfig.players.map(p => ({
+          model: p.model || '',
+          personality: p.personality || 'analytical',
+        })));
+      }
+      if (state.aiConfig.hostModel) {
+        setHostModel(state.aiConfig.hostModel);
+      }
+    }
+    if (state?.wordConfig) {
+      setWordMode(state.wordConfig.mode || 'preset');
+      setAiRatio(state.wordConfig.aiRatio ?? 0.3);
+    }
+  }, [ws.gameState]);
+
   // Listen for config errors
   useEffect(() => {
     if (ws.error) setSaveError(ws.error);

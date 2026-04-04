@@ -43,6 +43,17 @@ export function setupWebSocket(server) {
             if (connectedObservers.length > 0) {
               round.captainId = connectedObservers[Math.floor(Math.random() * connectedObservers.length)];
               console.log(`Captain disconnected, reassigned to ${round.captainId}`);
+            } else {
+              // No connected observers left - if in voting phase, auto-vote to unblock
+              if (room.state.phase === 'voting') {
+                console.log('Last observer disconnected during voting, auto-voting to unblock');
+                // Pick a random target from game team
+                const targetId = round.gameTeamPlayers[Math.floor(Math.random() * round.gameTeamPlayers.length)];
+                round.voteTarget = targetId;
+                // Trigger round result immediately
+                const { endRound } = await import('../game/engine.js');
+                endRound(room);
+              }
             }
           }
 
@@ -177,10 +188,8 @@ export function setupWebSocket(server) {
           if (!client.roomId && roomId) {
             client.roomId = roomId;
             client.type = msg.clientType || 'display';
-            // If this is the display reconnecting, restore host authorization
-            if (client.type === 'display' && room.hostId) {
-              room.hostId = client.id;
-            }
+            // Do not update room.hostId here - it would allow arbitrary clients to hijack host privileges
+            // The original host maintains hostId from create_room; if they lose connection, they lose host status
           }
           send(ws, {
             type: 'state_update',

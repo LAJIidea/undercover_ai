@@ -56,14 +56,21 @@ class FunASRHandler {
         reject(new Error('FunASR WebSocket connection timeout'));
       }, 5000);
 
+      let readyReceived = false;
+
       this.ws.onopen = () => {
-        clearTimeout(timeout);
-        resolve();
+        // Don't resolve yet - wait for first message from FunASR to confirm upstream is ready
       };
 
       this.ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
+          // First message confirms FunASR is ready
+          if (!readyReceived) {
+            readyReceived = true;
+            clearTimeout(timeout);
+            resolve();
+          }
           if (data.text && data.text.trim()) {
             this.onResult(data.text.trim());
           }
