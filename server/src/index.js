@@ -5,6 +5,7 @@ import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import cors from 'cors';
 import { setupWebSocket } from './services/websocket.js';
+import { setupSTTProxy } from './services/stt-proxy.js';
 import { apiRouter } from './routes/api.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -29,6 +30,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 setupWebSocket(server);
+setupSTTProxy(server);
 
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {

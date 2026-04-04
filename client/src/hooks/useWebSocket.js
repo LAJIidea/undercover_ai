@@ -51,6 +51,7 @@ export function useWebSocket(url) {
         case 'round_result':
         case 'game_over':
         case 'player_joined':
+        case 'player_disconnected':
           if (msg.state) setGameState(msg.state);
           break;
         case 'discussion_message':

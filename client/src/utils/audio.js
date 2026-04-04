@@ -7,7 +7,7 @@ async function fetchSTTConfig() {
     const res = await fetch('/api/stt-config');
     sttConfigCache = await res.json();
   } catch {
-    sttConfigCache = { available: false, wsUrl: '' };
+    sttConfigCache = { available: false };
   }
   return sttConfigCache;
 }
@@ -16,9 +16,12 @@ async function fetchSTTConfig() {
 export async function createSTTHandler(onResult, onError) {
   const config = await fetchSTTConfig();
 
-  if (config.available && config.wsUrl) {
+  if (config.available) {
     try {
-      const handler = new FunASRHandler(config.wsUrl, onResult, onError);
+      // Connect to server-side proxy at /ws-stt (no credentials needed)
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const proxyUrl = `${protocol}//${window.location.host}/ws-stt`;
+      const handler = new FunASRHandler(proxyUrl, onResult, onError);
       await handler.init();
       return handler;
     } catch (err) {

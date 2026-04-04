@@ -149,6 +149,9 @@ export function configureGame(roomId, config) {
   if (!room) throw new Error('Room not found');
 
   if (config.aiPlayers) {
+    if (!Array.isArray(config.aiPlayers) || config.aiPlayers.length > 4) {
+      throw new Error('aiPlayers must be an array with at most 4 elements');
+    }
     config.aiPlayers.forEach((aiConf, i) => {
       if (aiConf.model) {
         if (!isValidModel(aiConf.model)) {

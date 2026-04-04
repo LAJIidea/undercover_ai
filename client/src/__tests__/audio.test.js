@@ -22,7 +22,7 @@ describe('Audio STT Handler', () => {
 
   it('createSTTHandler falls back to browser when no FunASR config', async () => {
     global.fetch = vi.fn().mockResolvedValue({
-      json: () => Promise.resolve({ available: false, wsUrl: '' }),
+      json: () => Promise.resolve({ available: false }),
     });
     const mockRec = mockSpeechRecognition();
 
@@ -35,7 +35,7 @@ describe('Audio STT Handler', () => {
 
   it('createSTTHandler tries FunASR then falls back on failure', async () => {
     global.fetch = vi.fn().mockResolvedValue({
-      json: () => Promise.resolve({ available: true, wsUrl: 'wss://fake.example.com/ws?token=k' }),
+      json: () => Promise.resolve({ available: true }),
     });
 
     // Mock WebSocket that fails

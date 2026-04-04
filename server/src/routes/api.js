@@ -21,17 +21,11 @@ apiRouter.get('/health', (req, res) => {
   });
 });
 
-// STT config endpoint - returns connection URL with auth embedded, never exposes raw key
+// STT config endpoint - tells client if server-side STT proxy is available
 apiRouter.get('/stt-config', (req, res) => {
   const url = process.env.FUNASR_API_URL || '';
   const key = process.env.FUNASR_API_KEY || '';
-  if (!url || !key) {
-    return res.json({ available: false, wsUrl: '' });
-  }
-  // Embed token in URL server-side so the raw key is never sent to the client
-  const separator = url.includes('?') ? '&' : '?';
-  const authenticatedUrl = `${url}${separator}token=${encodeURIComponent(key)}`;
-  res.json({ available: true, wsUrl: authenticatedUrl });
+  res.json({ available: !!(url && key) });
 });
 
 // TTS endpoint
