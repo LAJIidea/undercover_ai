@@ -5,14 +5,18 @@ import GameDisplay from './components/GameDisplay.jsx';
 
 export default function App() {
   const ws = useWebSocket();
-  const [roomId, setRoomId] = useState(null);
-  const [hostToken, setHostToken] = useState(null);
+  const [roomId, setRoomId] = useState(() => localStorage.getItem('currentRoomId'));
+  const [hostToken, setHostToken] = useState(() => {
+    const rid = localStorage.getItem('currentRoomId');
+    return rid ? localStorage.getItem(`hostToken_${rid}`) : null;
+  });
 
   const handleCreateRoom = () => {
     ws.send({ type: 'create_room' });
     ws.on('room_created', (msg) => {
       setRoomId(msg.roomId);
       setHostToken(msg.hostToken);
+      localStorage.setItem('currentRoomId', msg.roomId);
       if (msg.hostToken) {
         localStorage.setItem(`hostToken_${msg.roomId}`, msg.hostToken);
       }

@@ -31,8 +31,26 @@ export default function MobilePlayer() {
     if (joined && ws.reconnectToken && playerName) {
       const storageKey = `reconnectToken_${roomId}_${playerName.trim()}`;
       localStorage.setItem(storageKey, ws.reconnectToken);
+      // Also store playerName for auto-rejoin
+      localStorage.setItem(`playerName_${roomId}`, playerName.trim());
     }
   }, [joined, ws.reconnectToken, playerName, roomId]);
+
+  // Auto-rejoin after websocket reconnect
+  useEffect(() => {
+    if (ws.connected && !ws.playerId && !joining) {
+      const storedName = playerName.trim() || localStorage.getItem(`playerName_${roomId}`);
+      if (storedName) {
+        const storageKey = `reconnectToken_${roomId}_${storedName}`;
+        const token = localStorage.getItem(storageKey);
+        if (token) {
+          ws.send({ type: 'join_room', roomId, playerName: storedName, clientType: 'player', reconnectToken: token });
+          if (!playerName) setPlayerName(storedName);
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ws.connected, ws.playerId]);
 
   // Reset joining state on error
   useEffect(() => {

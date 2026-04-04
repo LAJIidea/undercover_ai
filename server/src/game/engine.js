@@ -491,6 +491,27 @@ function triggerVoting(room) {
   // If observe team is AI, auto-vote
   if (round.observeTeamType === 'ai') {
     triggerAIVote(room);
+  } else {
+    // Human observe team: check if captain is still connected
+    const captain = room.state.humanPlayers.find(p => p.id === round.captainId);
+    if (!captain?.connected) {
+      // Try to reassign to another connected observer
+      const connectedObservers = round.observeTeamPlayers.filter(pid => {
+        const p = room.state.humanPlayers.find(h => h.id === pid);
+        return p?.connected;
+      });
+      if (connectedObservers.length > 0) {
+        round.captainId = connectedObservers[Math.floor(Math.random() * connectedObservers.length)];
+      } else {
+        // No connected observers: auto-vote to prevent deadlock
+        console.log('No connected observers at voting start, auto-voting');
+        const targetId = round.gameTeamPlayers[Math.floor(Math.random() * round.gameTeamPlayers.length)];
+        round.voteTarget = targetId;
+        round.voteCorrect = targetId === round.omniscientId;
+        calculateRoundScores(room);
+        return;
+      }
+    }
   }
 
   room.broadcast?.({ type: 'voting_started', state: getPublicState(room.state) });
@@ -665,6 +686,18 @@ async function triggerAIQuestion(room) {
     submitQuestion(room.state.roomId, currentPlayerId, question);
   } catch (err) {
     console.error(`AI question error for ${currentPlayerId}:`, err);
+    // Skip to next speaker to avoid deadlock
+    if (room.state.phase === GamePhase.QUESTIONING) {
+      round.waitingForAnswer = false;
+      round.currentSpeakerIndex = (round.currentSpeakerIndex + 1) % round.gameTeamPlayers.length;
+      room.broadcast?.({ type: 'speaker_advanced', state: getPublicState(room.state) });
+      // Schedule next AI question after delay
+      setTimeout(() => {
+        if (room.state.phase === GamePhase.QUESTIONING) {
+          triggerAIQuestion(room);
+        }
+      }, 2000);
+    }
   }
 }
 
