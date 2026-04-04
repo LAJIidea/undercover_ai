@@ -102,6 +102,10 @@ export function setupWebSocket(server) {
       }
 
       case 'configure': {
+        if (client.type !== 'display') {
+          sendError(ws, 'Only host can configure game');
+          break;
+        }
         try {
           configureGame(client.roomId, msg.config);
           send(ws, { type: 'configured' });
@@ -112,6 +116,10 @@ export function setupWebSocket(server) {
       }
 
       case 'start_game': {
+        if (client.type !== 'display') {
+          sendError(ws, 'Only host can start game');
+          break;
+        }
         startGame(client.roomId).catch(err => sendError(ws, err.message));
         break;
       }

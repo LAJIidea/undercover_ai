@@ -20,7 +20,8 @@ export default function App() {
     if (roomId && ws.connected && !ws.gameState) {
       ws.send({ type: 'get_state', roomId, clientType: 'display' });
     }
-  }, [roomId, ws.connected, ws.gameState, ws]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomId, ws.connected, ws.gameState]);
 
   const phase = ws.gameState?.phase;
 

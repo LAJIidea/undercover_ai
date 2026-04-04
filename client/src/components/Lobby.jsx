@@ -5,6 +5,7 @@ export default function Lobby({ roomId, ws }) {
   const state = ws.gameState;
   const joinUrl = `${window.location.origin}/play/${roomId}`;
   const humanCount = state?.humanPlayers?.length || 0;
+  const connectedCount = state?.humanPlayers?.filter(p => p.connected).length || 0;
 
   const handleStartGame = () => {
     ws.send({ type: 'start_game' });
@@ -58,12 +59,12 @@ export default function Lobby({ roomId, ws }) {
         <div className="text-center mt-8">
           <button
             onClick={handleStartGame}
-            disabled={humanCount < 4}
+            disabled={connectedCount < 4}
             className="px-12 py-4 bg-accent hover:bg-amber-600 rounded-xl text-xl font-bold
               text-gray-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed
               shadow-lg shadow-accent/25"
           >
-            {humanCount < 4 ? `等待玩家加入 (${humanCount}/4)` : '开始游戏'}
+            {connectedCount < 4 ? `等待玩家加入 (${connectedCount}/4)` : '开始游戏'}
           </button>
         </div>
       </div>

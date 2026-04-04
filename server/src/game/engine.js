@@ -274,9 +274,9 @@ function startDiscussion(room) {
 }
 
 function startQuestioning(room) {
-  transition(room, GamePhase.QUESTIONING);
   const round = getCurrentRound(room.state);
   round.questionStartTime = Date.now();
+  transition(room, GamePhase.QUESTIONING);
 
   // 7-minute hard limit
   room.timers.questioning = setTimeout(() => {
