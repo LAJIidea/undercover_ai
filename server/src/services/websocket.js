@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import {
   createRoom, getRoom, joinRoom, configureGame,
   startGame, submitDiscussion, submitQuestion,
-  submitGuess, submitVote, getPublicState, endRound,
+  submitGuess, submitVote, getPublicState, calculateRoundScores,
 } from '../game/engine.js';
 
 const clients = new Map(); // ws -> { id, roomId, type }
@@ -51,7 +51,7 @@ export function setupWebSocket(server) {
                 const targetId = round.gameTeamPlayers[Math.floor(Math.random() * round.gameTeamPlayers.length)];
                 round.voteTarget = targetId;
                 // Trigger round result immediately
-                endRound(room);
+                calculateRoundScores(room);
               }
             }
           }

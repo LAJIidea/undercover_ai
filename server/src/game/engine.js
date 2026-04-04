@@ -99,9 +99,10 @@ export function getPublicState(state, playerId = null) {
       roundPublic.wordCategory = round.wordCategory;
     }
     roundPublic.myRole = isOmniscient ? 'omniscient'
-      : round.gameTeamPlayers.includes(playerId) ? 'guesser'
       : round.captainId === playerId ? 'captain'
-      : 'observer';
+      : round.gameTeamPlayers.includes(playerId) ? 'guesser'
+      : isObserver ? 'observer'
+      : 'spectator';
   }
 
   // Reveal word and omniscient at round result
@@ -300,6 +301,17 @@ function startDiscussion(room) {
 function startQuestioning(room) {
   const round = getCurrentRound(room.state);
   round.questionStartTime = Date.now();
+
+  // Validate current speaker is connected before starting
+  let attempts = 0;
+  while (attempts < round.gameTeamPlayers.length) {
+    const speakerId = round.gameTeamPlayers[round.currentSpeakerIndex];
+    const speaker = room.state.humanPlayers.find(h => h.id === speakerId);
+    if (speaker?.connected || speakerId.startsWith('ai_')) break;
+    round.currentSpeakerIndex = (round.currentSpeakerIndex + 1) % round.gameTeamPlayers.length;
+    attempts++;
+  }
+
   transition(room, GamePhase.QUESTIONING);
 
   // 7-minute hard limit
@@ -488,7 +500,7 @@ export function submitVote(roomId, playerId, targetId) {
   calculateRoundScores(room);
 }
 
-function calculateRoundScores(room) {
+export function calculateRoundScores(room) {
   const state = room.state;
   const round = getCurrentRound(state);
 
