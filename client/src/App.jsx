@@ -35,6 +35,14 @@ export default function App() {
 
   const phase = ws.gameState?.phase;
 
+  // Clear persisted room state when game is over so next refresh starts fresh
+  useEffect(() => {
+    if (phase === 'game_over') {
+      localStorage.removeItem('currentRoomId');
+      if (roomId) localStorage.removeItem(`hostToken_${roomId}`);
+    }
+  }, [phase, roomId]);
+
   if (!roomId) {
     return (
       <div className="min-h-screen bg-game-bg flex items-center justify-center">

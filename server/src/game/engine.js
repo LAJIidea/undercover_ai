@@ -151,6 +151,11 @@ export function joinRoom(roomId, player) {
     throw new Error('Game already started');
   }
 
+  // Reject duplicate player names to avoid reconnect token conflicts
+  if (room.state.humanPlayers.some(p => p.name === player.name && p.connected)) {
+    throw new Error('Player name already taken');
+  }
+
   // Count only connected players for capacity check
   const connectedCount = room.state.humanPlayers.filter(p => p.connected).length;
   if (connectedCount >= 4) throw new Error('Room is full');
@@ -304,12 +309,25 @@ function startQuestioning(room) {
 
   // Validate current speaker is connected before starting
   let attempts = 0;
+  let foundSpeaker = false;
   while (attempts < round.gameTeamPlayers.length) {
     const speakerId = round.gameTeamPlayers[round.currentSpeakerIndex];
     const speaker = room.state.humanPlayers.find(h => h.id === speakerId);
-    if (speaker?.connected || speakerId.startsWith('ai_')) break;
+    if (speaker?.connected || speakerId.startsWith('ai_')) {
+      foundSpeaker = true;
+      break;
+    }
     round.currentSpeakerIndex = (round.currentSpeakerIndex + 1) % round.gameTeamPlayers.length;
     attempts++;
+  }
+
+  // If no connected speakers, skip directly to voting
+  if (!foundSpeaker) {
+    console.log('No connected speakers, skipping questioning to voting');
+    transition(room, GamePhase.QUESTIONING);
+    transition(room, GamePhase.VOTING);
+    triggerVoting(room);
+    return;
   }
 
   transition(room, GamePhase.QUESTIONING);
