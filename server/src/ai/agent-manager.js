@@ -162,13 +162,14 @@ export async function getAIResponse(type, context) {
 
   // Post-process vote to extract player ID
   if (type === 'observer_vote') {
-    const match = response.match(/ai_\d|human_\d/);
-    if (match) return match[0];
-    // Try to find any player ID mentioned
+    // First try to find any valid player ID from the game team
     for (const pid of context.gameTeamPlayers) {
       if (response.includes(pid)) return pid;
     }
-    // Fallback to random
+    // Fallback: try test-style IDs (for test environments)
+    const match = response.match(/ai_\d|human_\d/);
+    if (match) return match[0];
+    // Last resort: random selection
     return context.gameTeamPlayers[Math.floor(Math.random() * context.gameTeamPlayers.length)];
   }
 

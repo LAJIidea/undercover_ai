@@ -104,15 +104,12 @@ export function getPublicState(state, playerId = null) {
 export function joinRoom(roomId, player) {
   const room = getRoom(roomId);
   if (!room) throw new Error('Room not found');
-  const phase = room.state.phase;
-  if (phase !== GamePhase.WAITING && phase !== GamePhase.CONFIGURING) {
-    throw new Error('Game already started');
-  }
 
   // Check if this player is already in the room (by id)
   if (room.state.humanPlayers.some(p => p.id === player.id)) return;
 
   // Allow reconnection: if a player with the same name is disconnected, replace them
+  // This works even after game starts, allowing mid-game reconnection
   const disconnectedIndex = room.state.humanPlayers.findIndex(
     p => p.name === player.name && !p.connected
   );
@@ -121,6 +118,12 @@ export function joinRoom(roomId, player) {
     room.state.humanPlayers[disconnectedIndex].connected = true;
     room.broadcast?.({ type: 'player_joined', player, state: getPublicState(room.state) });
     return;
+  }
+
+  // Only allow new joins before game starts
+  const phase = room.state.phase;
+  if (phase !== GamePhase.WAITING && phase !== GamePhase.CONFIGURING) {
+    throw new Error('Game already started');
   }
 
   // Count only connected players for capacity check
@@ -180,7 +183,8 @@ export function configureGame(roomId, config) {
 export async function startGame(roomId) {
   const room = getRoom(roomId);
   if (!room) throw new Error('Room not found');
-  if (room.state.humanPlayers.length < 4) throw new Error('Need 4 human players');
+  const connectedHumans = room.state.humanPlayers.filter(p => p.connected);
+  if (connectedHumans.length < 4) throw new Error('Need 4 connected human players');
 
   // Validate AI config
   const allModels = room.state.aiConfig.players.every(p => p.model);
@@ -512,6 +516,7 @@ function getCurrentRound(state) {
 // AI action triggers
 async function triggerAIDiscussion(room) {
   const round = getCurrentRound(room.state);
+  const expectedPhase = room.state.phase;
   for (const playerId of round.gameTeamPlayers) {
     if (!playerId.startsWith('ai_')) continue;
     try {
@@ -525,6 +530,11 @@ async function triggerAIDiscussion(room) {
         questions: round.questions,
         model: aiPlayer.model,
       });
+      // Only write if still in discussion phase
+      if (room.state.phase !== expectedPhase) {
+        console.warn(`AI discussion for ${playerId} arrived after phase changed, discarding`);
+        continue;
+      }
       round.discussions.push({ playerId, message, timestamp: Date.now() });
       room.broadcast?.({ type: 'discussion_message', playerId, message, state: getPublicState(room.state) });
     } catch (err) {
@@ -535,6 +545,7 @@ async function triggerAIDiscussion(room) {
 
 async function triggerAIDiscussionMini(room) {
   const round = getCurrentRound(room.state);
+  const expectedPhase = room.state.phase;
   // Pick 1-2 random AI players to comment
   const aiPlayers = round.gameTeamPlayers.filter(id => id.startsWith('ai_'));
   const commenters = aiPlayers.slice(0, Math.floor(Math.random() * 2) + 1);
@@ -551,6 +562,11 @@ async function triggerAIDiscussionMini(room) {
         model: aiPlayer.model,
         brief: true,
       });
+      // Only write if still in questioning phase
+      if (room.state.phase !== expectedPhase) {
+        console.warn(`AI mini-discussion for ${playerId} arrived after phase changed, discarding`);
+        continue;
+      }
       round.discussions.push({ playerId, message, timestamp: Date.now() });
       room.broadcast?.({ type: 'discussion_message', playerId, message, state: getPublicState(room.state) });
     } catch (err) {

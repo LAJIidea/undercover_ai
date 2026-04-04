@@ -142,7 +142,7 @@ describe('Game Engine', () => {
         hostModel: 'openai/gpt-4o',
       });
 
-      await expect(startGame(roomId)).rejects.toThrow('Need 4 human players');
+      await expect(startGame(roomId)).rejects.toThrow('Need 4 connected human players');
     });
 
     it('requires all AI models configured to start', async () => {
