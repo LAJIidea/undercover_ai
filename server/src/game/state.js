@@ -79,12 +79,15 @@ export function createRoundState(roundNumber, gameState) {
   const gameTeamType = aiIsGameTeam ? 'ai' : 'human';
   const observeTeamType = aiIsGameTeam ? 'human' : 'ai';
 
+  // Only include connected human players in round participants
+  const connectedHumans = gameState.humanPlayers.filter(p => p.connected).map(p => p.id);
+
   const gameTeamPlayers = aiIsGameTeam
     ? gameState.aiConfig.players.map(p => p.id)
-    : gameState.humanPlayers.map(p => p.id);
+    : connectedHumans;
 
   const observeTeamPlayers = aiIsGameTeam
-    ? gameState.humanPlayers.map(p => p.id)
+    ? connectedHumans
     : gameState.aiConfig.players.map(p => p.id);
 
   // Random omniscient in game team

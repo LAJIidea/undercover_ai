@@ -26,14 +26,14 @@ export function setupWebSocket(server) {
 
     ws.on('close', () => {
       const client = clients.get(ws);
-      if (client?.roomId) {
+      if (client?.roomId && client?.playerId) {
         const room = getRoom(client.roomId);
         if (room) {
-          const player = room.state.humanPlayers.find(p => p.id === client.id);
+          const player = room.state.humanPlayers.find(p => p.id === client.playerId);
           if (player) player.connected = false;
           room.broadcast?.({
             type: 'player_disconnected',
-            playerId: client.id,
+            playerId: client.playerId,
             state: getPublicState(room.state),
           });
         }
@@ -69,10 +69,11 @@ export function setupWebSocket(server) {
           if (!room.broadcast) {
             room.broadcast = (data) => broadcastToRoom(roomId, data);
           }
-          const playerId = client.id;
-          joinRoom(roomId, { id: playerId, name: playerName });
+          // joinRoom returns stable playerId (may differ from client.id on reconnect)
+          const playerId = joinRoom(roomId, { id: client.id, name: playerName });
           // Only associate client with room after successful join
           client.roomId = roomId;
+          client.playerId = playerId; // Store stable playerId for this client
           client.type = clientType || 'player';
           send(ws, {
             type: 'joined',

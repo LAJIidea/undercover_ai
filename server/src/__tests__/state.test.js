@@ -84,7 +84,7 @@ describe('Game State', () => {
         { id: 'ai_0' }, { id: 'ai_1' }, { id: 'ai_2' }, { id: 'ai_3' },
       ];
       state.humanPlayers = [
-        { id: 'h_0' }, { id: 'h_1' }, { id: 'h_2' }, { id: 'h_3' },
+        { id: 'h_0', connected: true }, { id: 'h_1', connected: true }, { id: 'h_2', connected: true }, { id: 'h_3', connected: true },
       ];
 
       const round = createRoundState(1, state);
@@ -98,7 +98,7 @@ describe('Game State', () => {
         { id: 'ai_0' }, { id: 'ai_1' }, { id: 'ai_2' }, { id: 'ai_3' },
       ];
       state.humanPlayers = [
-        { id: 'h_0' }, { id: 'h_1' }, { id: 'h_2' }, { id: 'h_3' },
+        { id: 'h_0', connected: true }, { id: 'h_1', connected: true }, { id: 'h_2', connected: true }, { id: 'h_3', connected: true },
       ];
 
       const round = createRoundState(1, state);

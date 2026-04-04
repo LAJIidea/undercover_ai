@@ -106,18 +106,21 @@ export function joinRoom(roomId, player) {
   if (!room) throw new Error('Room not found');
 
   // Check if this player is already in the room (by id)
-  if (room.state.humanPlayers.some(p => p.id === player.id)) return;
+  const existing = room.state.humanPlayers.find(p => p.id === player.id);
+  if (existing) {
+    existing.connected = true;
+    return player.id;
+  }
 
-  // Allow reconnection: if a player with the same name is disconnected, replace them
-  // This works even after game starts, allowing mid-game reconnection
-  const disconnectedIndex = room.state.humanPlayers.findIndex(
+  // Allow reconnection: if a player with the same name is disconnected, restore them
+  // Keep the stable ID to preserve round state references (gameTeamPlayers, captainId, etc.)
+  const disconnectedPlayer = room.state.humanPlayers.find(
     p => p.name === player.name && !p.connected
   );
-  if (disconnectedIndex !== -1) {
-    room.state.humanPlayers[disconnectedIndex].id = player.id;
-    room.state.humanPlayers[disconnectedIndex].connected = true;
-    room.broadcast?.({ type: 'player_joined', player, state: getPublicState(room.state) });
-    return;
+  if (disconnectedPlayer) {
+    disconnectedPlayer.connected = true;
+    room.broadcast?.({ type: 'player_joined', player: { id: disconnectedPlayer.id, name: disconnectedPlayer.name }, state: getPublicState(room.state) });
+    return disconnectedPlayer.id; // Return stable ID for WebSocket layer to use
   }
 
   // Only allow new joins before game starts
@@ -145,6 +148,7 @@ export function joinRoom(roomId, player) {
     connected: true,
   });
   room.broadcast?.({ type: 'player_joined', player, state: getPublicState(room.state) });
+  return player.id;
 }
 
 export function configureGame(roomId, config) {
