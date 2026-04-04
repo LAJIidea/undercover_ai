@@ -46,6 +46,27 @@ export function setupWebSocket(server) {
             }
           }
 
+          // If current speaker disconnects during questioning, skip to next speaker
+          if (room.state.phase === 'questioning' && round) {
+            const currentSpeaker = round.gameTeamPlayers[round.currentSpeakerIndex];
+            if (currentSpeaker === client.playerId) {
+              // Find next connected speaker
+              let nextIndex = (round.currentSpeakerIndex + 1) % round.gameTeamPlayers.length;
+              let attempts = 0;
+              while (attempts < round.gameTeamPlayers.length) {
+                const nextSpeakerId = round.gameTeamPlayers[nextIndex];
+                const nextPlayer = room.state.humanPlayers.find(h => h.id === nextSpeakerId);
+                if (nextPlayer?.connected || nextSpeakerId.startsWith('ai_')) {
+                  round.currentSpeakerIndex = nextIndex;
+                  console.log(`Speaker disconnected, skipped to index ${nextIndex}`);
+                  break;
+                }
+                nextIndex = (nextIndex + 1) % round.gameTeamPlayers.length;
+                attempts++;
+              }
+            }
+          }
+
           room.broadcast?.({
             type: 'player_disconnected',
             playerId: client.playerId,
@@ -64,7 +85,7 @@ export function setupWebSocket(server) {
 
     switch (msg.type) {
       case 'create_room': {
-        const roomId = createRoom();
+        const roomId = createRoom(client.id);
         client.roomId = roomId;
         client.type = msg.clientType || 'display';
         const room = getRoom(roomId);
@@ -74,7 +95,7 @@ export function setupWebSocket(server) {
       }
 
       case 'join_room': {
-        const { roomId, playerName, clientType } = msg;
+        const { roomId, playerName, clientType, reconnectToken } = msg;
         try {
           const room = getRoom(roomId);
           if (!room) {
@@ -84,8 +105,9 @@ export function setupWebSocket(server) {
           if (!room.broadcast) {
             room.broadcast = (data) => broadcastToRoom(roomId, data);
           }
-          // joinRoom returns stable playerId (may differ from client.id on reconnect)
-          const playerId = joinRoom(roomId, { id: client.id, name: playerName });
+          // joinRoom returns { playerId, reconnectToken }
+          const result = joinRoom(roomId, { id: client.id, name: playerName, reconnectToken });
+          const playerId = result.playerId;
           // Only associate client with room after successful join
           client.roomId = roomId;
           client.playerId = playerId; // Store stable playerId for this client
@@ -93,6 +115,7 @@ export function setupWebSocket(server) {
           send(ws, {
             type: 'joined',
             playerId,
+            reconnectToken: result.reconnectToken,
             state: getPublicState(room.state, playerId),
           });
         } catch (err) {
@@ -102,7 +125,8 @@ export function setupWebSocket(server) {
       }
 
       case 'configure': {
-        if (client.type !== 'display') {
+        const room = getRoom(client.roomId);
+        if (!room || room.hostId !== client.id) {
           sendError(ws, 'Only host can configure game');
           break;
         }
@@ -116,7 +140,8 @@ export function setupWebSocket(server) {
       }
 
       case 'start_game': {
-        if (client.type !== 'display') {
+        const room = getRoom(client.roomId);
+        if (!room || room.hostId !== client.id) {
           sendError(ws, 'Only host can start game');
           break;
         }

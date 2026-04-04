@@ -13,10 +13,10 @@ import { isValidModel, validateApiKey, preflightApiKeyCheck } from '../ai/openro
 
 const rooms = new Map();
 
-export function createRoom() {
+export function createRoom(hostId) {
   const roomId = uuidv4().slice(0, 6).toUpperCase();
   const state = createInitialGameState(roomId);
-  rooms.set(roomId, { state, broadcast: null, timers: {} });
+  rooms.set(roomId, { state, broadcast: null, timers: {}, hostId });
   return roomId;
 }
 
@@ -109,18 +109,26 @@ export function joinRoom(roomId, player) {
   const existing = room.state.humanPlayers.find(p => p.id === player.id);
   if (existing) {
     existing.connected = true;
-    return player.id;
+    return { playerId: player.id, reconnectToken: existing.reconnectToken };
   }
 
   // Allow reconnection: if a player with the same name is disconnected, restore them
-  // Keep the stable ID to preserve round state references (gameTeamPlayers, captainId, etc.)
+  // Require reconnectToken to prevent impersonation
   const disconnectedPlayer = room.state.humanPlayers.find(
     p => p.name === player.name && !p.connected
   );
   if (disconnectedPlayer) {
-    disconnectedPlayer.connected = true;
-    room.broadcast?.({ type: 'player_joined', player: { id: disconnectedPlayer.id, name: disconnectedPlayer.name }, state: getPublicState(room.state) });
-    return disconnectedPlayer.id; // Return stable ID for WebSocket layer to use
+    // Verify reconnectToken if provided
+    if (player.reconnectToken && player.reconnectToken === disconnectedPlayer.reconnectToken) {
+      disconnectedPlayer.connected = true;
+      room.broadcast?.({ type: 'player_joined', player: { id: disconnectedPlayer.id, name: disconnectedPlayer.name }, state: getPublicState(room.state) });
+      return { playerId: disconnectedPlayer.id, reconnectToken: disconnectedPlayer.reconnectToken };
+    } else if (player.reconnectToken) {
+      // Token provided but wrong
+      throw new Error('Invalid reconnect token');
+    }
+    // No token provided - reject reconnection to prevent impersonation
+    throw new Error('Reconnection requires token');
   }
 
   // Only allow new joins before game starts
@@ -142,13 +150,16 @@ export function joinRoom(roomId, player) {
     }
   }
 
+  // Generate reconnect token for new player
+  const reconnectToken = uuidv4();
   room.state.humanPlayers.push({
     id: player.id,
     name: player.name,
     connected: true,
+    reconnectToken,
   });
   room.broadcast?.({ type: 'player_joined', player, state: getPublicState(room.state) });
-  return player.id;
+  return { playerId: player.id, reconnectToken };
 }
 
 export function configureGame(roomId, config) {

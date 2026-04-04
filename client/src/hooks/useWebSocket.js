@@ -5,6 +5,7 @@ export function useWebSocket(url) {
   const [clientId, setClientId] = useState(null);
   const [gameState, setGameState] = useState(null);
   const [playerId, setPlayerId] = useState(null);
+  const [reconnectToken, setReconnectToken] = useState(null);
   const [messages, setMessages] = useState([]);
   const [error, setError] = useState(null);
   const wsRef = useRef(null);
@@ -41,6 +42,7 @@ export function useWebSocket(url) {
           break;
         case 'joined':
           setPlayerId(msg.playerId);
+          setReconnectToken(msg.reconnectToken);
           setError(null);
           if (msg.state) setGameState(msg.state);
           break;
@@ -133,7 +135,7 @@ export function useWebSocket(url) {
   const clearError = useCallback(() => setError(null), []);
 
   return {
-    connected, clientId, gameState, playerId, messages, error,
+    connected, clientId, gameState, playerId, reconnectToken, messages, error,
     send, on, setGameState, clearError,
   };
 }

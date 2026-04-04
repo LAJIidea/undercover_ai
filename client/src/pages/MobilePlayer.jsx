@@ -20,8 +20,19 @@ export default function MobilePlayer() {
     if (!playerName.trim()) return;
     setJoining(true);
     ws.clearError();
-    ws.send({ type: 'join_room', roomId, playerName: playerName.trim(), clientType: 'player' });
+    // Try to get stored reconnectToken for this room+name
+    const storageKey = `reconnectToken_${roomId}_${playerName.trim()}`;
+    const reconnectToken = localStorage.getItem(storageKey);
+    ws.send({ type: 'join_room', roomId, playerName: playerName.trim(), clientType: 'player', reconnectToken });
   };
+
+  // Store reconnectToken when received
+  useEffect(() => {
+    if (joined && ws.reconnectToken && playerName) {
+      const storageKey = `reconnectToken_${roomId}_${playerName.trim()}`;
+      localStorage.setItem(storageKey, ws.reconnectToken);
+    }
+  }, [joined, ws.reconnectToken, playerName, roomId]);
 
   // Reset joining state on error
   useEffect(() => {
