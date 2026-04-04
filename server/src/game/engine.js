@@ -367,8 +367,19 @@ export function submitQuestion(roomId, playerId, question) {
 
   // Get host AI answer, then advance speaker
   answerQuestion(room, question, round.questions.length - 1).then(() => {
-    // Advance to next speaker after answer is received
-    round.currentSpeakerIndex = (round.currentSpeakerIndex + 1) % round.gameTeamPlayers.length;
+    // Advance to next connected speaker after answer is received
+    let nextIndex = (round.currentSpeakerIndex + 1) % round.gameTeamPlayers.length;
+    let attempts = 0;
+    while (attempts < round.gameTeamPlayers.length) {
+      const nextSpeakerId = round.gameTeamPlayers[nextIndex];
+      const nextPlayer = room.state.humanPlayers.find(h => h.id === nextSpeakerId);
+      if (nextPlayer?.connected || nextSpeakerId.startsWith('ai_')) {
+        round.currentSpeakerIndex = nextIndex;
+        break;
+      }
+      nextIndex = (nextIndex + 1) % round.gameTeamPlayers.length;
+      attempts++;
+    }
     room.broadcast?.({ type: 'speaker_advanced', state: getPublicState(room.state) });
   });
 

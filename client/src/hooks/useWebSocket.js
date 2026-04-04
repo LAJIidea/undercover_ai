@@ -50,6 +50,7 @@ export function useWebSocket(url) {
         case 'state_update':
         case 'config_updated':
         case 'questioning_started':
+        case 'speaker_advanced':
         case 'round_result':
         case 'game_over':
         case 'player_joined':

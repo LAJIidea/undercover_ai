@@ -59,13 +59,21 @@ class FunASRHandler {
       let readyReceived = false;
 
       this.ws.onopen = () => {
-        // Don't resolve yet - wait for first message from FunASR to confirm upstream is ready
+        // Resolve after short delay to allow proxy to establish upstream connection
+        // FunASR doesn't send readiness frame, so we can't wait for first message
+        setTimeout(() => {
+          if (!readyReceived) {
+            readyReceived = true;
+            clearTimeout(timeout);
+            resolve();
+          }
+        }, 500);
       };
 
       this.ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          // First message confirms FunASR is ready
+          // First message confirms FunASR is ready (if it arrives before timeout)
           if (!readyReceived) {
             readyReceived = true;
             clearTimeout(timeout);
