@@ -52,7 +52,9 @@ export function getPublicState(state, playerId = null) {
     aiPlayers: state.aiConfig.players.map(p => ({
       id: p.id, name: p.name, personality: p.personality,
     })),
-    humanPlayers: state.humanPlayers,
+    humanPlayers: state.humanPlayers.map(p => ({
+      id: p.id, name: p.name, connected: p.connected,
+    })),
   };
 
   if (!round) return base;

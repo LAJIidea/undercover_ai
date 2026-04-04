@@ -177,6 +177,10 @@ export function setupWebSocket(server) {
           if (!client.roomId && roomId) {
             client.roomId = roomId;
             client.type = msg.clientType || 'display';
+            // If this is the display reconnecting, restore host authorization
+            if (client.type === 'display' && room.hostId) {
+              room.hostId = client.id;
+            }
           }
           send(ws, {
             type: 'state_update',
