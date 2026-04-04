@@ -47,10 +47,9 @@ export function setupWebSocket(server) {
               // No connected observers left - if in voting phase, auto-vote to unblock
               if (room.state.phase === 'voting') {
                 console.log('Last observer disconnected during voting, auto-voting to unblock');
-                // Pick a random target from game team
                 const targetId = round.gameTeamPlayers[Math.floor(Math.random() * round.gameTeamPlayers.length)];
                 round.voteTarget = targetId;
-                // Trigger round result immediately
+                round.voteCorrect = targetId === round.omniscientId;
                 calculateRoundScores(room);
               }
             }
@@ -63,16 +62,23 @@ export function setupWebSocket(server) {
               // Find next connected speaker
               let nextIndex = (round.currentSpeakerIndex + 1) % round.gameTeamPlayers.length;
               let attempts = 0;
+              let found = false;
               while (attempts < round.gameTeamPlayers.length) {
                 const nextSpeakerId = round.gameTeamPlayers[nextIndex];
                 const nextPlayer = room.state.humanPlayers.find(h => h.id === nextSpeakerId);
                 if (nextPlayer?.connected || nextSpeakerId.startsWith('ai_')) {
                   round.currentSpeakerIndex = nextIndex;
                   console.log(`Speaker disconnected, skipped to index ${nextIndex}`);
+                  found = true;
                   break;
                 }
                 nextIndex = (nextIndex + 1) % round.gameTeamPlayers.length;
                 attempts++;
+              }
+              // If no connected speakers found, end questioning early
+              if (!found) {
+                console.log('All speakers disconnected, ending questioning');
+                submitGuess(room.state.roomId, round.gameTeamPlayers[0], '');
               }
             }
           }

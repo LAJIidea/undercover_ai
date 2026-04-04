@@ -362,6 +362,9 @@ export function submitQuestion(roomId, playerId, question) {
   const expectedSpeaker = round.gameTeamPlayers[round.currentSpeakerIndex];
   if (playerId !== expectedSpeaker) return;
 
+  // Block if still waiting for previous answer
+  if (round.waitingForAnswer) return;
+
   // Check time limit
   const elapsed = Date.now() - round.questionStartTime;
   if (elapsed >= QUESTION_TIME_LIMIT_MS) {
@@ -369,6 +372,7 @@ export function submitQuestion(roomId, playerId, question) {
     return;
   }
 
+  round.waitingForAnswer = true;
   round.questionCount++;
   round.questions.push({
     playerId,
@@ -392,6 +396,7 @@ export function submitQuestion(roomId, playerId, question) {
       nextIndex = (nextIndex + 1) % round.gameTeamPlayers.length;
       attempts++;
     }
+    round.waitingForAnswer = false;
     room.broadcast?.({ type: 'speaker_advanced', state: getPublicState(room.state) });
   });
 
@@ -401,6 +406,7 @@ export function submitQuestion(roomId, playerId, question) {
 
 async function answerQuestion(room, question, questionIndex) {
   const round = getCurrentRound(room.state);
+  const expectedRound = room.state.currentRound;
   try {
     const answer = await getAIResponse('host', {
       word: round.word,
@@ -408,6 +414,11 @@ async function answerQuestion(room, question, questionIndex) {
       question,
       model: room.state.aiConfig.hostModel,
     });
+    // Drop answer if phase moved past questioning
+    if (room.state.phase !== GamePhase.QUESTIONING || room.state.currentRound !== expectedRound) {
+      console.warn('Host answer arrived after questioning ended, discarding');
+      return;
+    }
     round.questions[questionIndex].answer = answer;
     room.broadcast?.({
       type: 'host_answer',
@@ -417,6 +428,7 @@ async function answerQuestion(room, question, questionIndex) {
     });
   } catch (err) {
     console.error('Host AI error:', err);
+    if (room.state.phase !== GamePhase.QUESTIONING || room.state.currentRound !== expectedRound) return;
     // Maintain yes/no constraint even on failure - default to "否"
     round.questions[questionIndex].answer = '否';
     room.broadcast?.({
