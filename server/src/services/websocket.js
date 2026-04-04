@@ -32,18 +32,17 @@ export function setupWebSocket(server) {
           const player = room.state.humanPlayers.find(p => p.id === client.playerId);
           if (player) player.connected = false;
 
-          // If captain disconnects during voting, reassign to another connected observe team member
-          if (room.state.phase === 'voting') {
-            const round = room.state.rounds[room.state.rounds.length - 1];
-            if (round?.captainId === client.playerId) {
-              const connectedObservers = round.observeTeamPlayers.filter(pid => {
-                const p = room.state.humanPlayers.find(h => h.id === pid);
-                return p?.connected || pid.startsWith('ai_');
-              });
-              if (connectedObservers.length > 0) {
-                round.captainId = connectedObservers[Math.floor(Math.random() * connectedObservers.length)];
-                console.log(`Captain disconnected, reassigned to ${round.captainId}`);
-              }
+          // If captain disconnects, reassign to another connected observe team member
+          // Check in any phase after round starts (discussion/questioning/guessing/voting)
+          const round = room.state.rounds[room.state.rounds.length - 1];
+          if (round?.captainId === client.playerId) {
+            const connectedObservers = round.observeTeamPlayers.filter(pid => {
+              const p = room.state.humanPlayers.find(h => h.id === pid);
+              return p?.connected || pid.startsWith('ai_');
+            });
+            if (connectedObservers.length > 0) {
+              round.captainId = connectedObservers[Math.floor(Math.random() * connectedObservers.length)];
+              console.log(`Captain disconnected, reassigned to ${round.captainId}`);
             }
           }
 

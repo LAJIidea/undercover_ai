@@ -245,11 +245,8 @@ async function startRound(room) {
     transition(room, GamePhase.WORD_ASSIGNMENT);
   } catch (err) {
     console.error('Failed to create round state:', err);
-    // If all humans disconnected, end the game gracefully via valid transition path
-    transition(room, GamePhase.ROUND_RESULT);
-    setTimeout(() => {
-      transition(room, GamePhase.GAME_OVER);
-    }, 100);
+    // If all humans disconnected, end the game gracefully
+    transition(room, GamePhase.GAME_OVER);
     return;
   }
 

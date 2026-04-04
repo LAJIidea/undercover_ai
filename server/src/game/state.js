@@ -34,7 +34,7 @@ export const DISCUSSION_TIME_MS = 45 * 1000; // 45 seconds
 const TRANSITIONS = {
   [GamePhase.WAITING]: [GamePhase.CONFIGURING],
   [GamePhase.CONFIGURING]: [GamePhase.ROUND_START],
-  [GamePhase.ROUND_START]: [GamePhase.WORD_ASSIGNMENT],
+  [GamePhase.ROUND_START]: [GamePhase.WORD_ASSIGNMENT, GamePhase.GAME_OVER], // GAME_OVER for emergency shutdown
   [GamePhase.WORD_ASSIGNMENT]: [GamePhase.DISCUSSION],
   [GamePhase.DISCUSSION]: [GamePhase.QUESTIONING],
   [GamePhase.QUESTIONING]: [GamePhase.GUESSING, GamePhase.VOTING], // timeout or guess attempt

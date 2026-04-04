@@ -33,6 +33,10 @@ export default function MobilePlayer() {
   const myRole = round?.myRole;
   const phase = state?.phase;
 
+  // Check if this player is the current speaker during questioning
+  const isCurrentSpeaker = phase === 'questioning' &&
+    round?.gameTeamPlayers?.[round?.currentSpeakerIndex] === ws.playerId;
+
   // Keep refs for auto-send from STT callback (which is set up once)
   const phaseRef = useRef(phase);
   const wsRef = useRef(ws);
@@ -236,8 +240,8 @@ export default function MobilePlayer() {
       )}
 
       {/* Input area */}
-      {(phase === 'discussion' || phase === 'questioning') &&
-       (myRole === 'guesser' || myRole === 'omniscient') && (
+      {((phase === 'discussion' && (myRole === 'guesser' || myRole === 'omniscient')) ||
+        (phase === 'questioning' && isCurrentSpeaker)) && (
         <div className="space-y-2">
           {sttStatus && (
             <p className="text-xs text-gray-500 text-center">{sttStatus}</p>
