@@ -49,11 +49,17 @@ export function setupSTTProxy(server) {
       funasrWs = new WebSocket(authenticatedUrl);
       funasrWs.binaryType = 'arraybuffer';
 
-      // Buffer client messages until FunASR connects
+      // Buffer client messages until FunASR connects (max 100 frames)
+      const MAX_BUFFER_SIZE = 100;
       clientWs.on('message', (data) => {
         if (funasrWs.readyState === WebSocket.OPEN) {
           funasrWs.send(data);
         } else {
+          if (messageBuffer.length >= MAX_BUFFER_SIZE) {
+            console.warn('STT buffer overflow, closing client connection');
+            clientWs.close(1008, 'Buffer overflow');
+            return;
+          }
           messageBuffer.push(data);
         }
       });

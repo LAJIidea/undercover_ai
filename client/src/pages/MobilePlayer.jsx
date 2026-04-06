@@ -61,6 +61,10 @@ export default function MobilePlayer() {
   useEffect(() => {
     if (joined) setJoining(false);
   }, [joined]);
+  // Clear joining on disconnect to unblock auto-rejoin
+  useEffect(() => {
+    if (!ws.connected && joining) setJoining(false);
+  }, [ws.connected, joining]);
 
   const state = ws.gameState;
   const round = state?.round;
@@ -161,8 +165,10 @@ export default function MobilePlayer() {
 
   const sendGuess = () => {
     if (!textInput.trim()) return;
-    ws.send({ type: 'guess', word: textInput.trim() });
-    setTextInput('');
+    const sent = ws.send({ type: 'guess', word: textInput.trim() });
+    if (sent) {
+      setTextInput('');
+    }
   };
 
   const sendVote = (targetId) => {
