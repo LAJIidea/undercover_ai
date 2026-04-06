@@ -13,14 +13,14 @@ async function fetchSTTConfig() {
 }
 
 // Create a unified STT interface that tries FunASR first, falls back to browser
-export async function createSTTHandler(onResult, onError) {
+export async function createSTTHandler(onResult, onError, roomId, token) {
   const config = await fetchSTTConfig();
 
-  if (config.available) {
+  if (config.available && roomId && token) {
     try {
-      // Connect to server-side proxy at /ws-stt (no credentials needed)
+      // Connect to server-side proxy at /ws-stt with auth params
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const proxyUrl = `${protocol}//${window.location.host}/ws-stt`;
+      const proxyUrl = `${protocol}//${window.location.host}/ws-stt?roomId=${encodeURIComponent(roomId)}&token=${encodeURIComponent(token)}`;
       const handler = new FunASRHandler(proxyUrl, onResult, onError);
       await handler.init();
       return handler;

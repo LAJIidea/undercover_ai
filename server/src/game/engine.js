@@ -699,6 +699,9 @@ async function triggerAIQuestion(room) {
   const currentPlayerId = round.gameTeamPlayers[round.currentSpeakerIndex];
   if (!currentPlayerId.startsWith('ai_')) return;
 
+  const expectedRound = room.state.currentRound;
+  const expectedPhase = room.state.phase;
+
   try {
     const aiPlayer = room.state.aiConfig.players.find(p => p.id === currentPlayerId);
     const isOmniscient = currentPlayerId === round.omniscientId;
@@ -710,6 +713,11 @@ async function triggerAIQuestion(room) {
       questions: round.questions,
       model: aiPlayer.model,
     });
+    // Drop question if round/phase changed during await
+    if (room.state.currentRound !== expectedRound || room.state.phase !== expectedPhase) {
+      console.warn('AI question arrived after round/phase change, discarding');
+      return;
+    }
     submitQuestion(room.state.roomId, currentPlayerId, question);
   } catch (err) {
     console.error(`AI question error for ${currentPlayerId}:`, err);

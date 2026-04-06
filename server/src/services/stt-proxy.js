@@ -1,4 +1,5 @@
 import WebSocket, { WebSocketServer } from 'ws';
+import { getRoom } from '../game/engine.js';
 
 // Server-side WebSocket proxy for FunASR STT
 // Clients connect to /ws-stt, server relays to FunASR with credentials
@@ -13,7 +14,32 @@ export function setupSTTProxy(server) {
 
   const wss = new WebSocketServer({ server, path: '/ws-stt' });
 
-  wss.on('connection', (clientWs) => {
+  wss.on('connection', (clientWs, req) => {
+    // Authenticate: require valid reconnectToken from active player
+    const urlParams = new URLSearchParams(req.url.split('?')[1]);
+    const token = urlParams.get('token');
+    const roomId = urlParams.get('roomId');
+
+    if (!token || !roomId) {
+      clientWs.close(1008, 'Missing authentication');
+      return;
+    }
+
+    const room = getRoom(roomId);
+    if (!room) {
+      clientWs.close(1008, 'Invalid room');
+      return;
+    }
+
+    // Verify token matches a connected player in this room
+    const validPlayer = room.state.humanPlayers.find(
+      p => p.reconnectToken === token && p.connected
+    );
+    if (!validPlayer) {
+      clientWs.close(1008, 'Invalid token');
+      return;
+    }
+
     let funasrWs = null;
     let messageBuffer = [];
 

@@ -217,11 +217,14 @@ export function setupWebSocket(server) {
   }
 
   function broadcastToRoom(roomId, data) {
+    const room = getRoom(roomId);
+    if (!room) return; // Room deleted, skip broadcast
+
     for (const [ws, client] of clients) {
       if (client.roomId === roomId && ws.readyState === 1) {
         // Send personalized state for players using stable playerId
         if (data.state && client.type === 'player' && client.playerId) {
-          const personalData = { ...data, state: getPublicState(getRoom(roomId).state, client.playerId) };
+          const personalData = { ...data, state: getPublicState(room.state, client.playerId) };
           send(ws, personalData);
         } else {
           send(ws, data);

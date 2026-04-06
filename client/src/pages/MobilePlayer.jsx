@@ -112,6 +112,8 @@ export default function MobilePlayer() {
         autoSendVoiceResult.current(text);
       },
       (errMsg) => setSttStatus(errMsg),
+      roomId,
+      ws.reconnectToken,
     ).then((handler) => {
       if (cancelled) { handler.close(); return; }
       sttRef.current = handler;
