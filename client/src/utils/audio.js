@@ -245,20 +245,29 @@ export async function playTTS(text) {
     try {
       await audio.play();
     } catch {
-      // Autoplay blocked - fall back to browser TTS
       URL.revokeObjectURL(audioUrl);
       return playBrowserTTS(text);
     }
-    audio.onended = () => URL.revokeObjectURL(audioUrl);
+    // Wait for playback to finish before resolving (enables sequential queuing)
+    await new Promise(resolve => {
+      audio.onended = () => { URL.revokeObjectURL(audioUrl); resolve(); };
+      audio.onerror = () => { URL.revokeObjectURL(audioUrl); resolve(); };
+    });
   } catch {
-    playBrowserTTS(text);
+    await playBrowserTTS(text);
   }
 }
 
 function playBrowserTTS(text) {
-  if ('speechSynthesis' in window) {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'zh-CN';
-    window.speechSynthesis.speak(utterance);
-  }
+  return new Promise(resolve => {
+    if ('speechSynthesis' in window) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'zh-CN';
+      utterance.onend = resolve;
+      utterance.onerror = resolve;
+      window.speechSynthesis.speak(utterance);
+    } else {
+      resolve();
+    }
+  });
 }

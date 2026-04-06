@@ -245,28 +245,28 @@ describe('GameDisplay TTS', () => {
     };
   }
 
-  it('triggers playTTS for AI discussion message', () => {
+  it('triggers playTTS for AI discussion message', async () => {
     const ws = makeDisplayWs([
       { playerId: 'ai_0', message: 'AI讨论内容', type: 'discussion', timestamp: 1 },
     ]);
     render(<GameDisplay roomId="TEST01" ws={ws} />);
-    expect(playTTS).toHaveBeenCalledWith('AI讨论内容');
+    await waitFor(() => expect(playTTS).toHaveBeenCalledWith('AI讨论内容'));
   });
 
-  it('triggers playTTS for AI question message', () => {
+  it('triggers playTTS for AI question message', async () => {
     const ws = makeDisplayWs([
       { playerId: 'ai_0', message: '这是人物吗', type: 'ai_question', timestamp: 2 },
     ]);
     render(<GameDisplay roomId="TEST01" ws={ws} />);
-    expect(playTTS).toHaveBeenCalledWith('这是人物吗');
+    await waitFor(() => expect(playTTS).toHaveBeenCalledWith('这是人物吗'));
   });
 
-  it('triggers playTTS for host answer message', () => {
+  it('triggers playTTS for host answer message', async () => {
     const ws = makeDisplayWs([
       { playerId: 'host', message: '主持人回答：是', type: 'host_answer', timestamp: 3 },
     ]);
     render(<GameDisplay roomId="TEST01" ws={ws} />);
-    expect(playTTS).toHaveBeenCalledWith('主持人回答：是');
+    await waitFor(() => expect(playTTS).toHaveBeenCalledWith('主持人回答：是'));
   });
 
   it('does NOT trigger playTTS for human messages', () => {

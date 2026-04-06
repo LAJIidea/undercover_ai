@@ -59,6 +59,7 @@ export default function App() {
     setRoomId(null);
     setHostToken(null);
     ws.setGameState(null);
+    ws.clearMessages();
   };
 
   if (!roomId) {

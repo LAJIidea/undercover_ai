@@ -20,17 +20,23 @@ export default function GameDisplay({ roomId, ws, onNewGame }) {
   const round = state?.round;
   const [ttsEnabled, setTtsEnabled] = useState(true);
   const lastTtsIdRef = useRef(0);
+  const ttsQueueRef = useRef(Promise.resolve());
 
   // Auto-play TTS for ALL AI messages (discussions + questions + host answers)
   useEffect(() => {
-    if (!ttsEnabled || !ws.messages.length) return;
+    if (!ws.messages.length) return;
     const newMessages = ws.messages.slice(lastTtsIdRef.current);
+    // Always advance cursor, even when muted, to avoid replay on unmute
     lastTtsIdRef.current = ws.messages.length;
 
+    if (!ttsEnabled) return;
+
     for (const msg of newMessages) {
-      // Play TTS for any AI-generated content
       if (msg.playerId?.startsWith('ai_') || msg.playerId === 'host') {
-        playTTS(msg.message);
+        // Queue TTS sequentially to prevent overlapping audio
+        ttsQueueRef.current = ttsQueueRef.current.then(
+          () => playTTS(msg.message)
+        ).catch(() => {});
       }
     }
   }, [ws.messages, ttsEnabled]);

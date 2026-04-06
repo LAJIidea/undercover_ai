@@ -135,8 +135,12 @@ export function useWebSocket(url) {
 
   const clearError = useCallback(() => setError(null), []);
 
+  const clearMessages = useCallback(() => {
+    setMessages([]);
+  }, []);
+
   return {
     connected, clientId, gameState, playerId, reconnectToken, messages, error,
-    send, on, setGameState, clearError,
+    send, on, setGameState, clearError, clearMessages,
   };
 }
