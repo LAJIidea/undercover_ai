@@ -403,8 +403,11 @@ export function submitQuestion(roomId, playerId, question) {
   });
 
   // Get host AI answer, then advance speaker
+  const expectedRoundForAdvance = room.state.currentRound;
   answerQuestion(room, question, round.questions.length - 1).then(() => {
     round.waitingForAnswer = false;
+    // Guard: don't advance if phase/round changed (guess, timeout, next round)
+    if (room.state.phase !== GamePhase.QUESTIONING || room.state.currentRound !== expectedRoundForAdvance) return;
     // Only advance if the speaker index hasn't already been moved (e.g. by disconnect handler)
     if (round.currentSpeakerIndex !== speakerIndexAtQuestion) return;
     // Advance to next connected speaker after answer is received
