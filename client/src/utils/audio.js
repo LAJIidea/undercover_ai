@@ -18,10 +18,10 @@ export async function createSTTHandler(onResult, onError, roomId, token) {
 
   if (config.available && roomId && token) {
     try {
-      // Connect to server-side proxy at /ws-stt with auth params
+      // Connect to server-side proxy at /ws-stt, auth via first message
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const proxyUrl = `${protocol}//${window.location.host}/ws-stt?roomId=${encodeURIComponent(roomId)}&token=${encodeURIComponent(token)}`;
-      const handler = new FunASRHandler(proxyUrl, onResult, onError);
+      const proxyUrl = `${protocol}//${window.location.host}/ws-stt`;
+      const handler = new FunASRHandler(proxyUrl, onResult, onError, roomId, token);
       await handler.init();
       return handler;
     } catch (err) {
@@ -36,8 +36,10 @@ export async function createSTTHandler(onResult, onError, roomId, token) {
 
 // FunASR: microphone capture → audio chunking → WebSocket send → result callback
 class FunASRHandler {
-  constructor(wsUrl, onResult, onError) {
+  constructor(wsUrl, onResult, onError, roomId, token) {
     this.wsUrl = wsUrl;
+    this.roomId = roomId;
+    this.token = token;
     this.onResult = onResult;
     this.onError = onError;
     this.ws = null;
@@ -56,12 +58,12 @@ class FunASRHandler {
         reject(new Error('FunASR WebSocket connection timeout'));
       }, 5000);
 
-      let readyReceived = false;
-
       this.ws.onopen = () => {
-        // Connection to proxy established, but upstream may not be ready yet
-        // Wait for 'ready' message from proxy or timeout
+        // Send auth as first message (not in URL to avoid log exposure)
+        this.ws.send(JSON.stringify({ roomId: this.roomId, token: this.token }));
       };
+
+      let readyReceived = false;
 
       this.ws.onmessage = (event) => {
         try {

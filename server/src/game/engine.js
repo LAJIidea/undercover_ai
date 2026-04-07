@@ -489,6 +489,9 @@ export function submitGuess(roomId, playerId, guessWord) {
   if (!room) return;
   if (room.state.phase !== GamePhase.QUESTIONING && room.state.phase !== GamePhase.GUESSING) return;
 
+  // Validate guessWord
+  const guess = typeof guessWord === 'string' ? guessWord.trim() : '';
+
   const round = getCurrentRound(room.state);
   if (!round.gameTeamPlayers.includes(playerId)) return;
 
@@ -498,10 +501,10 @@ export function submitGuess(roomId, playerId, guessWord) {
     transition(room, GamePhase.GUESSING);
   }
 
-  round.guessAttempt = guessWord;
-  round.guessCorrect = guessWord.trim().toLowerCase() === round.word.trim().toLowerCase();
+  round.guessAttempt = guess;
+  round.guessCorrect = guess.toLowerCase() === round.word.trim().toLowerCase();
 
-  room.broadcast?.({ type: 'guess_submitted', guessWord, state: getPublicState(room.state) });
+  room.broadcast?.({ type: 'guess_submitted', guessWord: guess, state: getPublicState(room.state) });
 
   // Move to voting
   transition(room, GamePhase.VOTING);
@@ -667,7 +670,9 @@ async function triggerAIDiscussionMini(room) {
   const expectedPhase = room.state.phase;
   // Pick 1-2 random AI players to comment
   const aiPlayers = round.gameTeamPlayers.filter(id => id.startsWith('ai_'));
-  const commenters = aiPlayers.slice(0, Math.floor(Math.random() * 2) + 1);
+  // Shuffle to avoid always picking from the start of the list
+  const shuffled = [...aiPlayers].sort(() => Math.random() - 0.5);
+  const commenters = shuffled.slice(0, Math.floor(Math.random() * 2) + 1);
 
   for (const playerId of commenters) {
     try {
