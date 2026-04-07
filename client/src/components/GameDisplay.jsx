@@ -35,7 +35,7 @@ export default function GameDisplay({ roomId, ws, onNewGame }) {
       if (msg.playerId?.startsWith('ai_') || msg.playerId === 'host') {
         // Queue TTS sequentially to prevent overlapping audio
         ttsQueueRef.current = ttsQueueRef.current.then(
-          () => playTTS(msg.message)
+          () => playTTS(msg.message, roomId)
         ).catch(() => {});
       }
     }

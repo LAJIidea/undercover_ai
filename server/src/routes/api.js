@@ -2,6 +2,7 @@ import express from 'express';
 import { getAllModels } from '../ai/openrouter.js';
 import { getWordCount } from '../game/words.js';
 import { textToSpeech } from '../services/tts.js';
+import { getRoom } from '../game/engine.js';
 
 export const apiRouter = express.Router();
 
@@ -28,10 +29,13 @@ apiRouter.get('/stt-config', (req, res) => {
   res.json({ available: !!(url && key) });
 });
 
-// TTS endpoint
+// TTS endpoint - requires valid roomId to prevent unauthenticated abuse
 apiRouter.post('/tts', async (req, res) => {
-  const { text, voice } = req.body;
+  const { text, voice, roomId } = req.body;
   if (!text) return res.status(400).json({ error: 'Text required' });
+  if (!roomId || !getRoom(roomId)) {
+    return res.status(403).json({ error: 'Valid room required' });
+  }
 
   const audio = await textToSpeech(text, voice);
   if (!audio) {

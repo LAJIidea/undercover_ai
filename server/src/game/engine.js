@@ -14,10 +14,25 @@ import { isValidModel, validateApiKey, preflightApiKeyCheck } from '../ai/openro
 const rooms = new Map();
 
 export function createRoom(hostId) {
-  const roomId = uuidv4().slice(0, 6).toUpperCase();
+  let roomId;
+  let attempts = 0;
+  do {
+    roomId = uuidv4().slice(0, 6).toUpperCase();
+    attempts++;
+  } while (rooms.has(roomId) && attempts < 100);
+
   const hostToken = uuidv4();
   const state = createInitialGameState(roomId);
-  rooms.set(roomId, { state, broadcast: null, timers: {}, hostId, hostToken });
+
+  // Schedule cleanup for rooms that never start (30 min TTL)
+  const idleTimeout = setTimeout(() => {
+    const room = rooms.get(roomId);
+    if (room && (room.state.phase === 'waiting' || room.state.phase === 'configuring')) {
+      deleteRoom(roomId);
+    }
+  }, 30 * 60 * 1000);
+
+  rooms.set(roomId, { state, broadcast: null, timers: { idle: idleTimeout }, hostId, hostToken });
   return { roomId, hostToken };
 }
 
@@ -118,6 +133,11 @@ export function getPublicState(state, playerId = null) {
 export function joinRoom(roomId, player) {
   const room = getRoom(roomId);
   if (!room) throw new Error('Room not found');
+
+  // Validate player name
+  const name = typeof player.name === 'string' ? player.name.trim().slice(0, 20) : '';
+  if (!name) throw new Error('Player name is required');
+  player.name = name;
 
   // Check if this player is already in the room (by id)
   const existing = room.state.humanPlayers.find(p => p.id === player.id);

@@ -231,12 +231,12 @@ export function createSTTConnection(apiUrl, apiKey, onResult) {
 }
 
 // Play TTS audio
-export async function playTTS(text) {
+export async function playTTS(text, roomId) {
   try {
     const response = await fetch('/api/tts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ text, roomId }),
     });
     if (!response.ok) {
       return playBrowserTTS(text);
