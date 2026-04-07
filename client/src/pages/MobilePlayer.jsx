@@ -38,7 +38,7 @@ export default function MobilePlayer() {
     }
   }, [joined, ws.reconnectToken, playerName, roomId]);
 
-  // Auto-rejoin after websocket reconnect
+  // Auto-rejoin after websocket reconnect (with retry on transient errors)
   useEffect(() => {
     if (ws.connected && !ws.playerId && !joining) {
       const storedName = playerName.trim() || localStorage.getItem(`playerName_${roomId}`);
@@ -46,8 +46,17 @@ export default function MobilePlayer() {
         const storageKey = `reconnectToken_${roomId}_${storedName}`;
         const token = localStorage.getItem(storageKey);
         if (token) {
-          ws.send({ type: 'join_room', roomId, playerName: storedName, clientType: 'player', reconnectToken: token });
+          const sent = ws.send({ type: 'join_room', roomId, playerName: storedName, clientType: 'player', reconnectToken: token });
           if (!playerName) setPlayerName(storedName);
+          // If first attempt fails (e.g. old socket not yet closed), retry after delay
+          if (sent) {
+            const retryTimer = setTimeout(() => {
+              if (!ws.playerId && ws.connected) {
+                ws.send({ type: 'join_room', roomId, playerName: storedName, clientType: 'player', reconnectToken: token });
+              }
+            }, 2000);
+            return () => clearTimeout(retryTimer);
+          }
         }
       }
     }
@@ -175,6 +184,10 @@ export default function MobilePlayer() {
     ws.send({ type: 'vote', targetId });
   };
 
+  // Resolve player ID to display name
+  const allPlayers = [...(state?.aiPlayers || []), ...(state?.humanPlayers || [])];
+  const getPlayerName = (id) => allPlayers.find(p => p.id === id)?.name || id;
+
   if (!joined) {
     return (
       <div className="min-h-screen bg-game-bg flex items-center justify-center p-6">
@@ -251,14 +264,14 @@ export default function MobilePlayer() {
       <div className="flex-1 bg-card-bg/50 rounded-xl p-3 mb-4 overflow-y-auto max-h-64">
         {(round?.questions || []).slice(-5).map((q, i) => (
           <div key={i} className="mb-2 text-sm">
-            <span className="text-gray-400">{q.playerId}: </span>
+            <span className="text-gray-400">{getPlayerName(q.playerId)}: </span>
             <span className="text-white">{q.question}</span>
             {q.answer && <span className="text-accent ml-2">→ {q.answer}</span>}
           </div>
         ))}
         {(round?.discussions || []).slice(-3).map((d, i) => (
           <div key={`d${i}`} className="mb-1 text-sm text-gray-400">
-            {d.playerId}: {d.message}
+            {getPlayerName(d.playerId)}: {d.message}
           </div>
         ))}
       </div>
@@ -274,7 +287,7 @@ export default function MobilePlayer() {
                 onClick={() => sendVote(pid)}
                 className="py-3 bg-card-bg border border-card-border rounded-xl hover:border-accent transition-colors"
               >
-                {pid}
+                {getPlayerName(pid)}
               </button>
             ))}
           </div>

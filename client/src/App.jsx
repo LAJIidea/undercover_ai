@@ -91,5 +91,5 @@ export default function App() {
     return <Lobby roomId={roomId} ws={ws} />;
   }
 
-  return <GameDisplay roomId={roomId} ws={ws} onNewGame={handleNewGame} />;
+  return <GameDisplay roomId={roomId} ws={ws} onNewGame={handleNewGame} hostToken={hostToken} />;
 }

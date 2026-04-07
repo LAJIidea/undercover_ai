@@ -29,12 +29,14 @@ apiRouter.get('/stt-config', (req, res) => {
   res.json({ available: !!(url && key) });
 });
 
-// TTS endpoint - requires valid roomId to prevent unauthenticated abuse
+// TTS endpoint - requires valid room + host token to prevent abuse
 apiRouter.post('/tts', async (req, res) => {
-  const { text, voice, roomId } = req.body;
+  const { text, voice, roomId, hostToken } = req.body;
   if (!text) return res.status(400).json({ error: 'Text required' });
-  if (!roomId || !getRoom(roomId)) {
-    return res.status(403).json({ error: 'Valid room required' });
+  const room = getRoom(roomId);
+  if (!room) return res.status(403).json({ error: 'Valid room required' });
+  if (!hostToken || hostToken !== room.hostToken) {
+    return res.status(403).json({ error: 'Invalid host token' });
   }
 
   const audio = await textToSpeech(text, voice);

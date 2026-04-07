@@ -15,7 +15,7 @@ const PHASE_LABELS = {
   game_over: '游戏结束',
 };
 
-export default function GameDisplay({ roomId, ws, onNewGame }) {
+export default function GameDisplay({ roomId, ws, onNewGame, hostToken }) {
   const state = ws.gameState;
   const round = state?.round;
   const [ttsEnabled, setTtsEnabled] = useState(true);
@@ -35,7 +35,7 @@ export default function GameDisplay({ roomId, ws, onNewGame }) {
       if (msg.playerId?.startsWith('ai_') || msg.playerId === 'host') {
         // Queue TTS sequentially to prevent overlapping audio
         ttsQueueRef.current = ttsQueueRef.current.then(
-          () => playTTS(msg.message, roomId)
+          () => playTTS(msg.message, roomId, hostToken)
         ).catch(() => {});
       }
     }

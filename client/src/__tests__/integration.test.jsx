@@ -249,31 +249,31 @@ describe('GameDisplay TTS', () => {
     const ws = makeDisplayWs([
       { playerId: 'ai_0', message: 'AI讨论内容', type: 'discussion', timestamp: 1 },
     ]);
-    render(<GameDisplay roomId="TEST01" ws={ws} />);
-    await waitFor(() => expect(playTTS).toHaveBeenCalledWith('AI讨论内容', 'TEST01'));
+    render(<GameDisplay roomId="TEST01" ws={ws} hostToken="test-host-token" />);
+    await waitFor(() => expect(playTTS).toHaveBeenCalledWith('AI讨论内容', 'TEST01', 'test-host-token'));
   });
 
   it('triggers playTTS for AI question message', async () => {
     const ws = makeDisplayWs([
       { playerId: 'ai_0', message: '这是人物吗', type: 'ai_question', timestamp: 2 },
     ]);
-    render(<GameDisplay roomId="TEST01" ws={ws} />);
-    await waitFor(() => expect(playTTS).toHaveBeenCalledWith('这是人物吗', 'TEST01'));
+    render(<GameDisplay roomId="TEST01" ws={ws} hostToken="test-host-token" />);
+    await waitFor(() => expect(playTTS).toHaveBeenCalledWith('这是人物吗', 'TEST01', 'test-host-token'));
   });
 
   it('triggers playTTS for host answer message', async () => {
     const ws = makeDisplayWs([
       { playerId: 'host', message: '主持人回答：是', type: 'host_answer', timestamp: 3 },
     ]);
-    render(<GameDisplay roomId="TEST01" ws={ws} />);
-    await waitFor(() => expect(playTTS).toHaveBeenCalledWith('主持人回答：是', 'TEST01'));
+    render(<GameDisplay roomId="TEST01" ws={ws} hostToken="test-host-token" />);
+    await waitFor(() => expect(playTTS).toHaveBeenCalledWith('主持人回答：是', 'TEST01', 'test-host-token'));
   });
 
   it('does NOT trigger playTTS for human messages', () => {
     const ws = makeDisplayWs([
       { playerId: 'human_0', message: '人类说话了', type: 'discussion', timestamp: 4 },
     ]);
-    render(<GameDisplay roomId="TEST01" ws={ws} />);
+    render(<GameDisplay roomId="TEST01" ws={ws} hostToken="test-host-token" />);
     expect(playTTS).not.toHaveBeenCalled();
   });
 });
