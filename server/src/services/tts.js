@@ -1,5 +1,3 @@
-import { callOpenRouter } from '../ai/openrouter.js';
-
 const COSYVOICE_URL = process.env.COSYVOICE_API_URL ||
   'https://dashscope.aliyuncs.com/api/v1/services/aigc/text2speech/generate';
 

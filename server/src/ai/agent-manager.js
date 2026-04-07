@@ -155,8 +155,10 @@ export async function getAIResponse(type, context) {
   // Post-process host answers to ensure only 是/否
   if (type === 'host') {
     const cleaned = response.trim();
-    if (cleaned.includes('是') && !cleaned.includes('否')) return '是';
-    if (cleaned.includes('否') && !cleaned.includes('是')) return '否';
+    // Check for negations first to avoid misclassifying "不是" as "是"
+    if (cleaned.includes('不是') || cleaned.includes('不对') || cleaned.includes('不')) return '否';
+    if (cleaned.includes('否')) return '否';
+    if (cleaned.includes('是') || cleaned.includes('对')) return '是';
     return cleaned.startsWith('是') ? '是' : '否';
   }
 
