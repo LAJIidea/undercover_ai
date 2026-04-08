@@ -12,7 +12,6 @@ export default function App() {
   });
 
   const handleCreateRoom = () => {
-    ws.send({ type: 'create_room' });
     ws.on('room_created', (msg) => {
       setRoomId(msg.roomId);
       setHostToken(msg.hostToken);
@@ -22,6 +21,7 @@ export default function App() {
       }
       if (msg.state) ws.setGameState(msg.state);
     });
+    ws.send({ type: 'create_room' });
   };
 
   // Recover state after reconnect if we have roomId but no gameState

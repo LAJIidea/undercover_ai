@@ -17,9 +17,13 @@ export function createRoom(hostId) {
   let roomId;
   let attempts = 0;
   do {
-    roomId = uuidv4().slice(0, 6).toUpperCase();
+    roomId = uuidv4().slice(0, 8).toUpperCase();
     attempts++;
   } while (rooms.has(roomId) && attempts < 100);
+
+  if (rooms.has(roomId)) {
+    throw new Error('Unable to generate unique room ID');
+  }
 
   const hostToken = uuidv4();
   const state = createInitialGameState(roomId);
@@ -658,8 +662,13 @@ function getCurrentRound(state) {
   return state.rounds[state.currentRound - 1];
 }
 
+function hasConnectedHumans(room) {
+  return room.state.humanPlayers.some(p => p.connected);
+}
+
 // AI action triggers
 async function triggerAIDiscussion(room) {
+  if (!hasConnectedHumans(room)) return;
   const round = getCurrentRound(room.state);
   const expectedPhase = room.state.phase;
   for (const playerId of round.gameTeamPlayers) {
@@ -689,6 +698,7 @@ async function triggerAIDiscussion(room) {
 }
 
 async function triggerAIDiscussionMini(room) {
+  if (!hasConnectedHumans(room)) return;
   const round = getCurrentRound(room.state);
   const expectedPhase = room.state.phase;
   // Pick 1-2 random AI players to comment
@@ -723,6 +733,7 @@ async function triggerAIDiscussionMini(room) {
 }
 
 async function triggerAIQuestion(room) {
+  if (!hasConnectedHumans(room)) return;
   const round = getCurrentRound(room.state);
   const currentPlayerId = round.gameTeamPlayers[round.currentSpeakerIndex];
   if (!currentPlayerId.startsWith('ai_')) return;
