@@ -16,11 +16,18 @@ export function setupWebSocket(server) {
     clients.set(ws, { id: clientId, roomId: null, type: null });
 
     ws.on('message', (data) => {
+      let msg;
       try {
-        const msg = JSON.parse(data);
+        msg = JSON.parse(data);
+      } catch {
+        sendError(ws, 'Invalid message format');
+        return;
+      }
+      try {
         handleMessage(ws, msg);
       } catch (err) {
-        sendError(ws, 'Invalid message format');
+        console.error('Message handler error:', err);
+        sendError(ws, 'Server error processing request');
       }
     });
 
@@ -123,12 +130,20 @@ export function setupWebSocket(server) {
           if (!room.broadcast) {
             room.broadcast = (data) => broadcastToRoom(roomId, data);
           }
+          // Leave previous room if switching rooms
+          if (client.roomId && client.roomId !== roomId && client.playerId) {
+            const oldRoom = getRoom(client.roomId);
+            if (oldRoom) {
+              const oldPlayer = oldRoom.state.humanPlayers.find(p => p.id === client.playerId);
+              if (oldPlayer) oldPlayer.connected = false;
+            }
+          }
           // joinRoom returns { playerId, reconnectToken }
           const result = joinRoom(roomId, { id: client.id, name: playerName, reconnectToken });
           const playerId = result.playerId;
           // Only associate client with room after successful join
           client.roomId = roomId;
-          client.playerId = playerId; // Store stable playerId for this client
+          client.playerId = playerId;
           client.type = clientType || 'player';
           send(ws, {
             type: 'joined',
