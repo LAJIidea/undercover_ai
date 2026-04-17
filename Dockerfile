@@ -1,10 +1,11 @@
 # Stage 1: Build client
 FROM node:20-alpine AS client-build
 WORKDIR /app/client
+ARG BASE_PATH=/
 COPY client/package.json ./
 RUN npm install
 COPY client/ ./
-RUN npm run build
+RUN VITE_BASE_PATH=${BASE_PATH} npm run build
 
 # Stage 2: Production server
 FROM node:20-alpine

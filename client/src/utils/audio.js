@@ -4,7 +4,7 @@ let sttConfigCache = null;
 async function fetchSTTConfig() {
   if (sttConfigCache) return sttConfigCache;
   try {
-    const res = await fetch('/api/stt-config');
+    const res = await fetch(`${import.meta.env.BASE_URL}api/stt-config`);
     sttConfigCache = await res.json();
   } catch {
     sttConfigCache = { available: false };
@@ -20,7 +20,8 @@ export async function createSTTHandler(onResult, onError, roomId, token) {
     try {
       // Connect to server-side proxy at /ws-stt, auth via first message
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const proxyUrl = `${protocol}//${window.location.host}/ws-stt`;
+      const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+      const proxyUrl = `${protocol}//${window.location.host}${base}/ws-stt`;
       const handler = new FunASRHandler(proxyUrl, onResult, onError, roomId, token);
       await handler.init();
       return handler;
@@ -233,7 +234,7 @@ export function createSTTConnection(apiUrl, apiKey, onResult) {
 // Play TTS audio
 export async function playTTS(text, roomId, hostToken) {
   try {
-    const response = await fetch('/api/tts', {
+    const response = await fetch(`${import.meta.env.BASE_URL}api/tts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text, roomId, hostToken }),

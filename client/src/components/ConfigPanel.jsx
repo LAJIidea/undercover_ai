@@ -14,7 +14,7 @@ export default function ConfigPanel({ ws }) {
   const [saveError, setSaveError] = useState(null);
 
   useEffect(() => {
-    fetch('/api/models').then(r => r.json()).then(setModels).catch(() => {});
+    fetch(`${import.meta.env.BASE_URL}api/models`).then(r => r.json()).then(setModels).catch(() => {});
   }, []);
 
   // Initialize from gameState when available (including after reconnect)
